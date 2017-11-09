@@ -25,7 +25,7 @@ public class Opcode0x0Test {
         ExecutionContext context = new ExecutionContext();
         context.getStack().push(0x1);
         opcodeHandler.execute(opcode, context);
-        assertEquals(0x3, context.getOffset());
+        assertEquals(0x1, context.getOffset());
         assertTrue(context.getStack().isEmpty());
     }
 

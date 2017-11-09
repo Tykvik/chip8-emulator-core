@@ -1,9 +1,7 @@
 package com.github.chip.emulator.core;
 
-import com.github.chip.emulator.core.events.DrawEvent;
 import com.github.chip.emulator.core.opcodes.*;
 import com.github.chip.emulator.core.services.EventService;
-import com.google.common.eventbus.Subscribe;
 import org.apache.log4j.Logger;
 
 import java.io.*;
@@ -47,10 +45,16 @@ public class ProgramExecutor {
     public void run() throws Exception {
         loadProgram();
 
-        for (int opcode = nextOpcode(); opcode != 0; opcode = nextOpcode(), executionContext.setOffset(executionContext.getOffset() + 2)) {
-            //Thread.sleep(100);
-            LOGGER.trace(String.format("%X",opcode & 0xF000));
-            opcodeMap.get(opcode & 0xF000).execute(opcode, executionContext);
+        for (;;) {
+            int opcode = nextOpcode();
+
+            if (opcode == 0)
+                break;
+
+            Thread.sleep(3);
+            LOGGER.trace(String.format("%X", opcode));
+            if (opcodeMap.get(opcode & 0xF000).execute(opcode, executionContext))
+                executionContext.setOffset(executionContext.getOffset() + 2);
         }
     }
 

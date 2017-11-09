@@ -1,13 +1,34 @@
+/**
+ * MIT License
+ * Copyright (c) 2017 Helloween
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 package com.github.chip.emulator.core;
 
 import com.github.chip.emulator.core.events.PlaySoundEvent;
 import com.github.chip.emulator.core.services.EventService;
+import com.google.common.collect.ObjectArrays;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author helloween
@@ -15,54 +36,46 @@ import java.util.TimerTask;
 public class ExecutionContext {
     private static final int MEMORY_SIZE        = 1 << 12;
     private static final int REGISTER_COUNT     = 1 << 4;
-    private static final int[] FONT = {
-            0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
-            0x20, 0x60, 0x20, 0x20, 0x70, // 1
-            0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
-            0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
-            0x90, 0X90, 0xF0, 0x10, 0x10, // 4
-            0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
-            0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
-            0xF0, 0x10, 0x20, 0x40, 0x40, // 7
-            0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
-            0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
-            0xF0, 0x90, 0xF0, 0x90, 0x90, // A
-            0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
-            0xF0, 0x80, 0x80, 0x80, 0xF0, // C
-            0xE0, 0x90, 0x90, 0x90, 0xE0, // D
-            0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
-            0xF0, 0x80, 0xF0, 0x80, 0x80  // F
-    };
 
     private final ByteBuffer        memory;
     private final Register[]        registers;
     private final IRegister         iRegister;
     private final Deque<Integer>    stack;
-    private final boolean[][]       gfx;
+    private final VideoMemory       VMU;
+    private final boolean[]         keys;
     private int                     offset;
-    private int                     delayTimer;
-    private int                     soundTimer;
+    private AtomicInteger           delayTimer;
+    private AtomicInteger           soundTimer;
 
     public ExecutionContext() {
         this.memory         = ByteBuffer.allocateDirect(MEMORY_SIZE);
         this.registers      = new Register[REGISTER_COUNT];
         this.iRegister      = new IRegister();
         this.stack          = new ArrayDeque<>();
-        this.gfx            = new boolean[32][64];
         this.offset         = 0x200;
+        this.delayTimer     = new AtomicInteger();
+        this.soundTimer     = new AtomicInteger();
+        this.keys           = new boolean[REGISTER_COUNT];
+
+        Arrays.fill(keys, false);
+        for (int i = 0; i < MEMORY_SIZE; ++i)
+            memory.put(i, (byte) 0x0);
 
         for (int i = 0; i < REGISTER_COUNT; ++i)
             registers[i] = new Register();
-        for (int i = 0; i < FONT.length; ++i)
-            memory.put(i, (byte) FONT[i]);
+
+        this.VMU            = new VideoMemory(memory, iRegister, registers[15]);
 
         Timer timer = new Timer(true);
         TimerTask task = new TimerTask() {
             @Override
             public void run() {
-                delayTimer = Math.max(delayTimer - 1, 0);
-                if (soundTimer != 0) {
-                    soundTimer = Math.max(soundTimer - 1, 0);
+                int delayTimerValue = delayTimer.get();
+                delayTimer.compareAndSet(delayTimerValue, Math.max(delayTimerValue - 1, 0));
+
+                int soundTimerValue = soundTimer.get();
+                if (soundTimerValue != 0) {
+                    soundTimer.compareAndSet(soundTimerValue, Math.max(soundTimerValue - 1, 0));
                     EventService.getInstance().postEvent(PlaySoundEvent.INSTANCE);
                 }
             }
@@ -88,23 +101,21 @@ public class ExecutionContext {
     }
 
     public int getDelayTimer() {
-        return delayTimer;
+        return delayTimer.get();
     }
 
     public int getSoundTimer() {
-        return soundTimer;
+        return soundTimer.get();
     }
 
     public void setDelayTimer(int delayTimer) {
-        this.delayTimer = delayTimer;
+        int oldDelayTimerValue = this.delayTimer.get();
+        this.delayTimer.compareAndSet(oldDelayTimerValue, delayTimer);
     }
 
     public void setSoundTimer(int soundTimer) {
-        this.soundTimer = soundTimer;
-    }
-
-    public boolean[][] getGfx() {
-        return gfx;
+        int oldSoundTimerValue = this.soundTimer.get();
+        this.soundTimer.compareAndSet(oldSoundTimerValue, soundTimer);
     }
 
     public int getOffset() {
@@ -112,6 +123,10 @@ public class ExecutionContext {
     }
 
     public void setOffset(int offset) {
-        this.offset = offset;
+        this.offset = (offset & 0xFFF);
+    }
+
+    public boolean[] getKeys() {
+        return keys;
     }
 }
