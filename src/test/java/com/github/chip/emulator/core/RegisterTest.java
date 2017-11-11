@@ -15,13 +15,13 @@ public class RegisterTest {
 
     @Before
     public void init() {
-        register            = new Register();
-        secondRegister      = new Register();
+        register            = new Register(0x0);
+        secondRegister      = new Register(0x1);
     }
 
     @Test
     public void getValue() throws Exception {
-        Register register = new Register();
+        Register register = new Register(0x0);
         assertEquals(0x0, register.getValue());
         register.setValue(0xFF);
         assertEquals(0xFF, register.getValue());

@@ -23,8 +23,8 @@
 package com.github.chip.emulator.core.opcodes;
 
 import com.github.chip.emulator.core.ExecutionContext;
+import com.github.chip.emulator.core.Register;
 import com.github.chip.emulator.core.events.DrawEvent;
-import com.github.chip.emulator.core.exceptions.UnsupportedOpcodeException;
 import com.github.chip.emulator.core.services.EventService;
 import org.apache.log4j.Logger;
 
@@ -36,21 +36,15 @@ import org.apache.log4j.Logger;
  *
  * @author helloween
  */
-public class Opcode0xD implements Opcode {
+public class Opcode0xD extends TwoRegistersBasedOpcode {
     private static final Logger LOGGER = Logger.getLogger(Opcode0xD.class);
 
     @Override
-    public boolean execute(int opcode, ExecutionContext executionContext) throws UnsupportedOpcodeException {
-        int firstRegister   = (opcode & 0x0F00) >> 8;
-        int secondRegister  = (opcode & 0x00F0) >> 4;
-        int height          = opcode & 0x000F;
-        LOGGER.trace(String.format("x = V%d, y = V%d", firstRegister, secondRegister));
-        LOGGER.trace(String.format("draw x=%d y=%d height=%d", executionContext.getRegisters()[firstRegister].getValue(),
-                                                                  executionContext.getRegisters()[secondRegister].getValue(),
-                                                                  height));
-        EventService.getInstance().postEvent(new DrawEvent(executionContext.getRegisters()[firstRegister].getValue(),
-                                                           executionContext.getRegisters()[secondRegister].getValue(),
-                                                           height));
-        return true;
+    public int execute(Register firstRegister, Register secondRegister, int opcode, ExecutionContext executionContext) {
+        int height = opcode & 0x000F;
+        LOGGER.trace(String.format("x = V%d, y = V%d", firstRegister.getNumber(), secondRegister.getNumber()));
+        LOGGER.trace(String.format("draw x=%d y=%d height=%d", firstRegister.getValue(), secondRegister.getValue(), height));
+        EventService.getInstance().postEvent(new DrawEvent(firstRegister.getValue(), secondRegister.getValue(), height));
+        return OPCODE_SIZE;
     }
 }

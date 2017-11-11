@@ -23,6 +23,7 @@
 package com.github.chip.emulator.core.opcodes;
 
 import com.github.chip.emulator.core.ExecutionContext;
+import com.github.chip.emulator.core.exceptions.InvalidRegisterNumberException;
 import com.github.chip.emulator.core.exceptions.UnsupportedOpcodeException;
 
 /**
@@ -31,13 +32,15 @@ import com.github.chip.emulator.core.exceptions.UnsupportedOpcodeException;
  * @author helloween
  */
 public interface Opcode {
+    int OPCODE_SIZE = 0x2;
+
     /**
      * handle opcode
      *
      * @param opcode opcode
      * @param executionContext execution context
-     * @return flag to increment program counter
+     * @return program counter offset
      * @throws UnsupportedOpcodeException
      */
-    boolean execute(int opcode, ExecutionContext executionContext) throws UnsupportedOpcodeException;
+    int execute(int opcode, ExecutionContext executionContext) throws UnsupportedOpcodeException, InvalidRegisterNumberException;
 }

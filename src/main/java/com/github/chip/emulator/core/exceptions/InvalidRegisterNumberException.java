@@ -20,29 +20,28 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.github.chip.emulator.core.opcodes;
-
-import com.github.chip.emulator.core.ExecutionContext;
-import com.github.chip.emulator.core.Register;
-import org.apache.log4j.Logger;
-
-import java.util.Random;
+package com.github.chip.emulator.core.exceptions;
 
 /**
- * 0xC opcode group handler
- * 0xCXNN - sets VX to the result of a bitwise and operation on a random number and NN
- *
  * @author helloween
  */
-public class Opcode0xC extends RegisterBasedOpcode {
-    private static final Logger LOGGER = Logger.getLogger(Opcode0xC.class);
-    private static final Random random = new Random();
+public class InvalidRegisterNumberException extends Exception {
+    public InvalidRegisterNumberException() {
+    }
 
-    @Override
-    public int execute(Register register, int opcode, ExecutionContext executionContext) {
-        int value = random.nextInt(0xFF) & (opcode & 0x00FF);
-        LOGGER.trace(String.format("V%d = rand() & %#X", register.getNumber(), value));
-        register.setValue(value);
-        return OPCODE_SIZE;
+    public InvalidRegisterNumberException(String s) {
+        super(s);
+    }
+
+    public InvalidRegisterNumberException(String s, Throwable throwable) {
+        super(s, throwable);
+    }
+
+    public InvalidRegisterNumberException(Throwable throwable) {
+        super(throwable);
+    }
+
+    public InvalidRegisterNumberException(String s, Throwable throwable, boolean b, boolean b1) {
+        super(s, throwable, b, b1);
     }
 }

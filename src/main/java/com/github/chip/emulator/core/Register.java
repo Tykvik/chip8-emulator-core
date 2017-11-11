@@ -28,13 +28,24 @@ package com.github.chip.emulator.core;
  * @author helloween
  */
 public class Register {
-    private int value;
+    private int     number;
+    private int     value;
 
     /**
      * ctor
+     *
+     * @param number register number
      */
-    public Register() {
-        this.value = 0x0;
+    public Register(int number) {
+        this.number = number;
+        this.value  = 0x0;
+    }
+
+    /**
+     * @return register number
+     */
+    public int getNumber() {
+        return number;
     }
 
     /**

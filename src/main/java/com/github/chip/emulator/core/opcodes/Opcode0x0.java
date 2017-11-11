@@ -39,7 +39,7 @@ public class Opcode0x0 implements Opcode {
     private static final Logger LOGGER = Logger.getLogger(Opcode0x0.class);
 
     @Override
-    public boolean execute(int opcode, ExecutionContext executionContext) throws UnsupportedOpcodeException {
+    public int execute(int opcode, ExecutionContext executionContext) throws UnsupportedOpcodeException {
         switch (opcode & 0x00FF) {
             case 0x00E0: {
                 LOGGER.trace("clear screen");
@@ -54,6 +54,6 @@ public class Opcode0x0 implements Opcode {
             default:
                 throw new UnsupportedOpcodeException("unsupported 0x0XXX opcode");
         }
-        return true;
+        return OPCODE_SIZE;
     }
 }

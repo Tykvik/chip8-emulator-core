@@ -21,12 +21,9 @@ public class Opcode0x3Test {
     public void execute() throws Exception {
         int opcode = 0x02FF;
         ExecutionContext context = new ExecutionContext();
-        int offset = context.getOffset();
         context.getRegisters()[2].setValue(0xFF);
-        opcodeHandler.execute(opcode, context);
-        assertEquals(offset + 0x2, context.getOffset());
+        assertEquals(Opcode.OPCODE_SIZE * 2, opcodeHandler.execute(opcode, context));
         context.getRegisters()[2].setValue(0xF0);
-        opcodeHandler.execute(opcode, context);
-        assertEquals(offset + 0x2, context.getOffset());
+        assertEquals(Opcode.OPCODE_SIZE, opcodeHandler.execute(opcode, context));
     }
 }

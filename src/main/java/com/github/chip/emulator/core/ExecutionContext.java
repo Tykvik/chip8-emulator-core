@@ -61,8 +61,8 @@ public class ExecutionContext {
         for (int i = 0; i < MEMORY_SIZE; ++i)
             memory.put(i, (byte) 0x0);
 
-        for (int i = 0; i < REGISTER_COUNT; ++i)
-            registers[i] = new Register();
+        for (short i = 0; i < REGISTER_COUNT; ++i)
+            registers[i] = new Register(i);
 
         this.VMU            = new VideoMemory(memory, iRegister, registers[15]);
 

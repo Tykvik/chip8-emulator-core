@@ -26,7 +26,6 @@ public class Opcode0x4Test {
         opcodeHandler.execute(opcode, context);
         assertEquals(offset, context.getOffset());
         context.getRegisters()[2].setValue(0xF0);
-        opcodeHandler.execute(opcode, context);
-        assertEquals(offset + 2, context.getOffset());
+        assertEquals(Opcode.OPCODE_SIZE * 2, opcodeHandler.execute(opcode, context));
     }
 }

@@ -24,25 +24,20 @@ package com.github.chip.emulator.core.opcodes;
 
 import com.github.chip.emulator.core.ExecutionContext;
 import com.github.chip.emulator.core.Register;
-import org.apache.log4j.Logger;
-
-import java.util.Random;
+import com.github.chip.emulator.core.exceptions.InvalidRegisterNumberException;
+import com.github.chip.emulator.core.exceptions.UnsupportedOpcodeException;
 
 /**
- * 0xC opcode group handler
- * 0xCXNN - sets VX to the result of a bitwise and operation on a random number and NN
- *
  * @author helloween
  */
-public class Opcode0xC extends RegisterBasedOpcode {
-    private static final Logger LOGGER = Logger.getLogger(Opcode0xC.class);
-    private static final Random random = new Random();
-
+public abstract class TwoRegistersBasedOpcode extends RegisterBasedOpcode {
     @Override
-    public int execute(Register register, int opcode, ExecutionContext executionContext) {
-        int value = random.nextInt(0xFF) & (opcode & 0x00FF);
-        LOGGER.trace(String.format("V%d = rand() & %#X", register.getNumber(), value));
-        register.setValue(value);
-        return OPCODE_SIZE;
+    protected int execute(Register register, int opcode, ExecutionContext executionContext) throws UnsupportedOpcodeException, InvalidRegisterNumberException {
+        int secondRegister = (opcode & 0x00F0) >> 4;
+        checkRegisterRange(secondRegister);
+
+        return execute(register, executionContext.getRegisters()[secondRegister], opcode, executionContext);
     }
+
+    protected abstract int execute(Register firstRegister, Register secondRegister, int opcode, ExecutionContext executionContext) throws UnsupportedOpcodeException;
 }

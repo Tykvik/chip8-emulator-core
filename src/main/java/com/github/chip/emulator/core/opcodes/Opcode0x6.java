@@ -23,7 +23,7 @@
 package com.github.chip.emulator.core.opcodes;
 
 import com.github.chip.emulator.core.ExecutionContext;
-import com.github.chip.emulator.core.exceptions.UnsupportedOpcodeException;
+import com.github.chip.emulator.core.Register;
 import org.apache.log4j.Logger;
 
 /**
@@ -32,16 +32,15 @@ import org.apache.log4j.Logger;
  *
  * @author helloween
  */
-public class Opcode0x6 implements Opcode {
+public class Opcode0x6 extends RegisterBasedOpcode {
     private static final Logger LOGGER = Logger.getLogger(Opcode0x6.class);
 
     @Override
-    public boolean execute(int opcode, ExecutionContext executionContext) throws UnsupportedOpcodeException {
-        int register = (opcode & 0x0F00) >> 8;
-        int value    = opcode & 0x00FF;
+    public int execute(Register register, int opcode, ExecutionContext executionContext) {
+        int value = opcode & 0x00FF;
 
-        LOGGER.trace(String.format("set V%d to %#X", register, value));
-        executionContext.getRegisters()[register].setValue(value);
-        return true;
+        LOGGER.trace(String.format("set V%d to %#X", register.getNumber(), value));
+        register.setValue(value);
+        return OPCODE_SIZE;
     }
 }

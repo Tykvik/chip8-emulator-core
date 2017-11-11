@@ -24,25 +24,26 @@ package com.github.chip.emulator.core.opcodes;
 
 import com.github.chip.emulator.core.ExecutionContext;
 import com.github.chip.emulator.core.Register;
-import org.apache.log4j.Logger;
-
-import java.util.Random;
+import com.github.chip.emulator.core.exceptions.InvalidRegisterNumberException;
+import com.github.chip.emulator.core.exceptions.UnsupportedOpcodeException;
 
 /**
- * 0xC opcode group handler
- * 0xCXNN - sets VX to the result of a bitwise and operation on a random number and NN
- *
  * @author helloween
  */
-public class Opcode0xC extends RegisterBasedOpcode {
-    private static final Logger LOGGER = Logger.getLogger(Opcode0xC.class);
-    private static final Random random = new Random();
+public abstract class RegisterBasedOpcode implements Opcode {
 
     @Override
-    public int execute(Register register, int opcode, ExecutionContext executionContext) {
-        int value = random.nextInt(0xFF) & (opcode & 0x00FF);
-        LOGGER.trace(String.format("V%d = rand() & %#X", register.getNumber(), value));
-        register.setValue(value);
-        return OPCODE_SIZE;
+    public int execute(int opcode, ExecutionContext executionContext) throws UnsupportedOpcodeException, InvalidRegisterNumberException {
+        int register = (opcode & 0x0F00) >> 8;
+        checkRegisterRange(register);
+
+        return execute(executionContext.getRegisters()[register], opcode, executionContext);
+    }
+
+    protected abstract int execute(Register register, int opcode, ExecutionContext executionContext) throws UnsupportedOpcodeException, InvalidRegisterNumberException;
+
+    protected void checkRegisterRange(int register) throws InvalidRegisterNumberException {
+        if (register < 0 || register > 0xF)
+            throw new InvalidRegisterNumberException(String.format("invalid register number : %d", register));
     }
 }

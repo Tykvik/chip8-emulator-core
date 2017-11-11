@@ -23,6 +23,7 @@
 package com.github.chip.emulator.core.opcodes;
 
 import com.github.chip.emulator.core.ExecutionContext;
+import com.github.chip.emulator.core.Register;
 import com.github.chip.emulator.core.exceptions.UnsupportedOpcodeException;
 import org.apache.log4j.Logger;
 
@@ -33,31 +34,29 @@ import org.apache.log4j.Logger;
  *
  * @author helloween
  */
-public class Opcode0xE implements Opcode {
+public class Opcode0xE extends RegisterBasedOpcode {
     private static final Logger LOGGER = Logger.getLogger(Opcode0xE.class);
 
     @Override
-    public boolean execute(int opcode, ExecutionContext executionContext) throws UnsupportedOpcodeException {
-        int register = (opcode & 0x0F00) >> 8;
-
+    public int execute(Register register, int opcode, ExecutionContext executionContext) throws UnsupportedOpcodeException {
         switch (opcode & 0x00FF) {
             case 0x9E : {
-                LOGGER.trace(String.format("key == V%d", register));
-                if(executionContext.getKeys()[executionContext.getRegisters()[register].getValue()]) {
+                LOGGER.trace(String.format("key == V%d", register.getNumber()));
+                if(executionContext.getKeys()[register.getValue()]) {
                     executionContext.setOffset(executionContext.getOffset() + 2);
-                    executionContext.getKeys()[executionContext.getRegisters()[register].getValue()] = false;
+                    executionContext.getKeys()[register.getValue()] = false;
                 }
                 break;
             }
             case 0xA1 : {
                 LOGGER.trace(String.format("key != V%d", register));
-                if(!executionContext.getKeys()[executionContext.getRegisters()[register].getValue()])
+                if(!executionContext.getKeys()[register.getValue()])
                     executionContext.setOffset(executionContext.getOffset() + 2);
                 break;
             }
             default:
                 throw new UnsupportedOpcodeException("unsupported 0xEXXX opcode");
         }
-        return true;
+        return OPCODE_SIZE;
     }
 }

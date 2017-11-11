@@ -46,6 +46,7 @@ public class ProgramExecutor {
         loadProgram();
 
         for (;;) {
+            Thread.sleep(1000);
             int opcode = nextOpcode();
 
             if (opcode == 0)
@@ -53,8 +54,7 @@ public class ProgramExecutor {
 
             Thread.sleep(3);
             LOGGER.trace(String.format("%X", opcode));
-            if (opcodeMap.get(opcode & 0xF000).execute(opcode, executionContext))
-                executionContext.setOffset(executionContext.getOffset() + 2);
+            executionContext.setOffset(opcodeMap.get(opcode & 0xF000).execute(opcode, executionContext) + executionContext.getOffset());
         }
     }
 
@@ -67,7 +67,7 @@ public class ProgramExecutor {
 
     private void loadProgram() throws IOException {
         DataInputStream input = null;
-        String file = "";
+        String file = "/home/helloween/TETRIS";
         try {
             input = new DataInputStream(new FileInputStream(new File(file)));
 
