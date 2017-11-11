@@ -22,9 +22,9 @@
  */
 package com.github.chip.emulator.core;
 
-import com.github.chip.emulator.core.events.PlaySoundEvent;
+import com.github.chip.emulator.core.events.*;
 import com.github.chip.emulator.core.services.EventService;
-import com.google.common.collect.ObjectArrays;
+import com.google.common.eventbus.Subscribe;
 
 import java.nio.ByteBuffer;
 import java.util.*;
@@ -36,12 +36,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ExecutionContext {
     private static final int MEMORY_SIZE        = 1 << 12;
     private static final int REGISTER_COUNT     = 1 << 4;
+    private static final int SCREEN_WIDTH       = 64;
+    private static final int SCREEN_HEIGHT      = 32;
 
     private final ByteBuffer        memory;
     private final Register[]        registers;
     private final IRegister         iRegister;
     private final Deque<Integer>    stack;
-    private final VideoMemory       VMU;
     private final boolean[]         keys;
     private int                     offset;
     private AtomicInteger           delayTimer;
@@ -57,14 +58,11 @@ public class ExecutionContext {
         this.soundTimer     = new AtomicInteger();
         this.keys           = new boolean[REGISTER_COUNT];
 
-        Arrays.fill(keys, false);
-        for (int i = 0; i < MEMORY_SIZE; ++i)
-            memory.put(i, (byte) 0x0);
-
         for (short i = 0; i < REGISTER_COUNT; ++i)
             registers[i] = new Register(i);
 
-        this.VMU            = new VideoMemory(memory, iRegister, registers[15]);
+        memory.position(offset);
+        new VRAM();
 
         Timer timer = new Timer(true);
         TimerTask task = new TimerTask() {
@@ -104,10 +102,6 @@ public class ExecutionContext {
         return delayTimer.get();
     }
 
-    public int getSoundTimer() {
-        return soundTimer.get();
-    }
-
     public void setDelayTimer(int delayTimer) {
         int oldDelayTimerValue = this.delayTimer.get();
         this.delayTimer.compareAndSet(oldDelayTimerValue, delayTimer);
@@ -128,5 +122,62 @@ public class ExecutionContext {
 
     public boolean[] getKeys() {
         return keys;
+    }
+
+    /**
+     * video memory
+     */
+    @SuppressWarnings({"unused", "SpellCheckingInspection"})
+    private class VRAM {
+        private final boolean[][] vram;
+
+        public VRAM() {
+            vram = new boolean[SCREEN_WIDTH][SCREEN_HEIGHT];
+            EventService.getInstance().registerHandler(this);
+        }
+
+        /**
+         * draw
+         *
+         * @param x x coordinate
+         * @param y y coordinate
+         * @param height height
+         */
+        public void draw(int x, int y, int height) {
+            registers[0xF].setValue(0x0);
+
+            for(int j = 0; j < height; j++) {
+                int dat = (memory.get(j + iRegister.getValue())) & 0xFF;
+                for(int i = 0; i < 8; i++) {
+                    if((dat & (0x80 >> i)) == 0) continue;
+
+                    int rx = i + x;
+                    int ry = j + y;
+
+                    if(rx >= SCREEN_WIDTH || ry >= SCREEN_HEIGHT) continue;
+
+                    if(vram[rx][ry])
+                        registers[0xF].setValue(0x1);
+
+                    vram[rx][ry] ^= true;
+                }
+            }
+            EventService.getInstance().postEvent(new RefreshScreenEvent(vram));
+        }
+
+        @Subscribe
+        @SuppressWarnings("unused")
+        public void handleDrawEvent(DrawEvent drawEvent) {
+            draw(drawEvent.getX(), drawEvent.getY(), drawEvent.getHeight());
+        }
+
+        @Subscribe
+        @SuppressWarnings("unused")
+        public void handleClearEvent(ClearVRAMEvent event) {
+            for (int i = 0; i < SCREEN_WIDTH; ++i)
+                for (int j = 0; j < SCREEN_HEIGHT; ++j)
+                    vram[i][j] = false;
+            EventService.getInstance().postEvent(ClearScreenEvent.INSTANCE);
+        }
     }
 }

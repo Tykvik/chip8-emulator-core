@@ -23,7 +23,7 @@
 package com.github.chip.emulator.core.opcodes;
 
 import com.github.chip.emulator.core.ExecutionContext;
-import com.github.chip.emulator.core.events.ClearScreenEvent;
+import com.github.chip.emulator.core.events.ClearVRAMEvent;
 import com.github.chip.emulator.core.exceptions.UnsupportedOpcodeException;
 import com.github.chip.emulator.core.services.EventService;
 import org.apache.log4j.Logger;
@@ -43,7 +43,7 @@ public class Opcode0x0 implements Opcode {
         switch (opcode & 0x00FF) {
             case 0x00E0: {
                 LOGGER.trace("clear screen");
-                EventService.getInstance().postEvent(ClearScreenEvent.INSTANCE);
+                EventService.getInstance().postEvent(ClearVRAMEvent.INSTANCE);
                 break;
             }
             case 0x00EE: {

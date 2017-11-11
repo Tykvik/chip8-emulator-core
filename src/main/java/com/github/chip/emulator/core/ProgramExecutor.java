@@ -1,10 +1,30 @@
+/**
+ * MIT License
+ * Copyright (c) 2017 Helloween
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 package com.github.chip.emulator.core;
 
 import com.github.chip.emulator.core.opcodes.*;
-import com.github.chip.emulator.core.services.EventService;
 import org.apache.log4j.Logger;
 
-import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
@@ -12,14 +32,22 @@ import java.util.Map;
 /**
  * @author helloween
  */
-public class ProgramExecutor {
+public class ProgramExecutor implements Runnable {
     private static final Logger LOGGER = Logger.getLogger(ProgramExecutor.class);
 
     private final ExecutionContext          executionContext;
     private final Map<Integer, Opcode>      opcodeMap;
+    private final int                       delay;
 
-    public ProgramExecutor() {
-        executionContext = new ExecutionContext();
+    /**
+     * ctor
+     *
+     * @param programBuffer ROM as ByteBuffer
+     * @param delayInMillis delay in millis
+     */
+    public ProgramExecutor(ByteBuffer programBuffer, int delayInMillis) {
+        this.executionContext   = new ExecutionContext();
+        this.delay              = delayInMillis;
 
         opcodeMap = new HashMap<>();
         opcodeMap.put(0x0000, new Opcode0x0());
@@ -39,48 +67,33 @@ public class ProgramExecutor {
         opcodeMap.put(0xE000, new Opcode0xE());
         opcodeMap.put(0xF000, new Opcode0xF());
 
-        EventService.getInstance().registerHandler(this);
+        programBuffer.rewind();
+        while (programBuffer.hasRemaining())
+            executionContext.getMemory().put(programBuffer.get());
     }
 
-    public void run() throws Exception {
-        loadProgram();
+    @Override
+    public void run() {
+        try {
+            for (;;) {
+                Thread.sleep(delay);
+                int opcode = readOpcode();
 
-        for (;;) {
-            Thread.sleep(1000);
-            int opcode = nextOpcode();
+                if (opcode == 0x0)
+                    break;
 
-            if (opcode == 0)
-                break;
-
-            Thread.sleep(3);
-            LOGGER.trace(String.format("%X", opcode));
-            executionContext.setOffset(opcodeMap.get(opcode & 0xF000).execute(opcode, executionContext) + executionContext.getOffset());
+                LOGGER.trace(String.format("%X", opcode));
+                executionContext.setOffset(opcodeMap.get(opcode & 0xF000).execute(opcode, executionContext) + executionContext.getOffset());
+            }
+        } catch (Exception e) {
+            LOGGER.error(e);
         }
     }
 
-    private int nextOpcode() {
+    private int readOpcode() {
         final ByteBuffer memory = executionContext.getMemory();
         final int offset = executionContext.getOffset();
 
         return ((memory.get(offset) << 8) | (memory.get(offset + 1) & 0x00FF)) & 0xFFFF;
-    }
-
-    private void loadProgram() throws IOException {
-        DataInputStream input = null;
-        String file = "/home/helloween/TETRIS";
-        try {
-            input = new DataInputStream(new FileInputStream(new File(file)));
-
-            for (int offset = 0; input.available() > 0; ++offset)
-                executionContext.getMemory().put(executionContext.getOffset() + offset, (byte) (input.readByte() & 0xFF));
-
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-            System.exit(0);
-        } finally {
-            if (input != null) {
-                input.close();
-            }
-        }
     }
 }
