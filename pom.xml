@@ -62,7 +62,6 @@
                 <configuration>
                     <destFile>${basedir}/target/coverage-report/jacoco.exec</destFile>
                     <dataFile>${basedir}/target/coverage-report/jacoco.exec</dataFile>
-                    <outputDirectory>${basedir}/src/main/java</outputDirectory>
                     <rules>
                         <rule implementation="org.jacoco.maven.RuleConfiguration">
                             <element>BUNDLE</element>
