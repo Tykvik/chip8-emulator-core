@@ -1,6 +1,7 @@
 package com.github.chip.emulator.core.opcodes;
 
 import com.github.chip.emulator.core.ExecutionContext;
+import com.github.chip.emulator.core.Register;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -23,18 +24,18 @@ public class Opcode0xFTest {
         ExecutionContext context = new ExecutionContext();
         context.setDelayTimer(0xFF);
         opcodeHandler.execute(opcode, context);
-        assertTrue(context.getRegisters()[2].getValue() > 0);
+        assertTrue(context.getRegister(0x2).getValue() > 0);
         context.setDelayTimer(0x0);
         opcode = 0x0215;
         opcodeHandler.execute(opcode, context);
         assertTrue(context.getDelayTimer() > 0);
         opcode = 0x021E;
-        context.getRegisters()[2].setValue(0x3);
+        context.setRegister(new Register(0x2, 0x3));
         opcodeHandler.execute(opcode, context);
-        assertEquals(0x3, context.getiRegister().getValue());
+        assertEquals(0x3, context.getIndexRegister().getValue());
         opcode = 0x0229;
         opcodeHandler.execute(opcode, context);
-        assertEquals(0x3 * 5, context.getiRegister().getValue());
+        assertEquals(0x3 * 5, context.getIndexRegister().getValue());
     }
 
 }

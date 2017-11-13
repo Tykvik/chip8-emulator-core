@@ -28,11 +28,16 @@ package com.github.chip.emulator.core.events;
 public class RefreshScreenEvent {
     private final boolean[][] screen;
 
+    /**
+     * ctor
+     *
+     * @param screen vram
+     */
     public RefreshScreenEvent(boolean[][] screen) {
-
         this.screen = screen;
     }
 
+    @SuppressWarnings("unused")
     public boolean[][] getScreen() {
         return screen;
     }

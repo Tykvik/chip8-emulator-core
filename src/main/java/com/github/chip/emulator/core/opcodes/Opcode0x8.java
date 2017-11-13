@@ -49,50 +49,56 @@ public class Opcode0x8 extends TwoRegistersBasedOpcode {
         switch (opcode & 0x000F) {
             case 0x0: {
                 LOGGER.trace(String.format("V%d = V%d", firstRegister.getNumber(), secondRegister.getNumber()));
-                firstRegister.setValue(secondRegister.getValue());
+                executionContext.setRegister(new Register(firstRegister.getNumber(), secondRegister.getValue()));
                 break;
             }
             case 0x1: {
                 LOGGER.trace(String.format("V%d |= V%d", firstRegister.getNumber(), secondRegister.getNumber()));
-                firstRegister.or(secondRegister);
+                executionContext.setRegister(firstRegister.or(secondRegister));
                 break;
             }
             case 0x2: {
                 LOGGER.trace(String.format("V%d &= V%d", firstRegister.getNumber(), secondRegister.getNumber()));
-                firstRegister.and(secondRegister);
+                executionContext.setRegister(firstRegister.and(secondRegister));
                 break;
             }
             case 0x3: {
                 LOGGER.trace(String.format("V%d ^= V%d", firstRegister.getNumber(), secondRegister.getNumber()));
-                firstRegister.xor(secondRegister);
+                executionContext.setRegister(firstRegister.xor(secondRegister));
                 break;
             }
             case 0x4: {
                 LOGGER.trace(String.format("V%d += V%d", firstRegister.getNumber(), secondRegister.getNumber()));
-                executionContext.getRegisters()[0xF].setValue(firstRegister.add(secondRegister) ? 0x1 : 0x0);
+                executionContext.setRegister(new Register(0xF, firstRegister.getValue() + secondRegister.getValue() > 0xFF ? 0x1 : 0x0));
+                executionContext.setRegister(firstRegister.add(secondRegister));
                 break;
             }
             case 0x5: {
                 LOGGER.trace(String.format("V%d -= V%d", firstRegister.getNumber(), secondRegister.getNumber()));
-                executionContext.getRegisters()[0xF].setValue(firstRegister.sub(secondRegister) ? 0x0 : 0x1);
+                executionContext.setRegister(new Register(0xF, firstRegister.getValue() < secondRegister.getValue() ? 0x0 : 0x1));
+                executionContext.setRegister(firstRegister.sub(secondRegister));
                 break;
             }
             case 0x6: {
                 LOGGER.trace(String.format("V%d = V%d = V%d >> 1", firstRegister.getNumber(), secondRegister.getNumber(), secondRegister.getNumber()));
-                executionContext.getRegisters()[0xF].setValue(secondRegister.rightShift(1));
-                firstRegister.setValue(secondRegister.getValue());
+                Register shiftedRegister = secondRegister.rightShift();
+                executionContext.setRegister(shiftedRegister);
+                executionContext.setRegister(new Register(firstRegister.getNumber(), shiftedRegister.getValue()));
+                executionContext.setRegister(new Register(0xF, secondRegister.getValue() & 0x1));
                 break;
             }
             case 0x7: {
                 LOGGER.trace(String.format("V%d = V%d - V%d", firstRegister.getNumber(), secondRegister.getNumber(), firstRegister.getNumber()));
-                executionContext.getRegisters()[0xF].setValue(secondRegister.getValue() < firstRegister.getValue() ? 0x0 : 0x1);
-                firstRegister.setValue(secondRegister.getValue() - firstRegister.getValue());
+                executionContext.setRegister(new Register(0xF, secondRegister.getValue() < firstRegister.getValue() ? 0x0 : 0x1));
+                executionContext.setRegister(new Register(firstRegister.getNumber(), secondRegister.getValue() - firstRegister.getValue()));
                 break;
             }
             case 0xE: {
                 LOGGER.trace(String.format("V%d = V%d = V%d << 1", firstRegister.getNumber(), secondRegister.getNumber(), secondRegister.getNumber()));
-                executionContext.getRegisters()[0xF].setValue(secondRegister.leftShift(1));
-                firstRegister.setValue(secondRegister.getValue());
+                Register shiftedRegister = secondRegister.leftShift();
+                executionContext.setRegister(shiftedRegister);
+                executionContext.setRegister(new Register(firstRegister.getNumber(), shiftedRegister.getValue()));
+                executionContext.setRegister(new Register(0xF, (secondRegister.getValue() & 0x80) >> 7));
                 break;
             }
             default:

@@ -23,12 +23,18 @@
 package com.github.chip.emulator.core;
 
 import com.github.chip.emulator.core.events.*;
+import com.github.chip.emulator.core.services.AsyncEventService;
 import com.github.chip.emulator.core.services.EventService;
 import com.google.common.eventbus.Subscribe;
 
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * @author helloween
@@ -39,41 +45,50 @@ public class ExecutionContext {
     private static final int SCREEN_WIDTH       = 64;
     private static final int SCREEN_HEIGHT      = 32;
 
-    private final ByteBuffer        memory;
-    private final Register[]        registers;
-    private final IRegister         iRegister;
-    private final Deque<Integer>    stack;
-    private final boolean[]         keys;
-    private int                     offset;
-    private AtomicInteger           delayTimer;
-    private AtomicInteger           soundTimer;
+    private final ByteBuffer             memory;
+    private final Map<Integer, Register> registers;
+    private AtomicReference<IRegister>   iRegister;
+    private final Deque<Integer>         stack;
+    private final Map<Integer, Boolean>  keys;
+    private volatile AtomicInteger       offset;
+    private volatile AtomicInteger       delayTimer;
+    private volatile AtomicInteger       soundTimer;
+    private ReadWriteLock                readWriteLock;
 
     public ExecutionContext() {
         this.memory         = ByteBuffer.allocateDirect(MEMORY_SIZE);
-        this.registers      = new Register[REGISTER_COUNT];
-        this.iRegister      = new IRegister();
-        this.stack          = new ArrayDeque<>();
-        this.offset         = 0x200;
+        this.registers      = new ConcurrentHashMap<>();
+        this.iRegister      = new AtomicReference<>(new IRegister());
+        this.stack          = new ConcurrentLinkedDeque<>();
+        this.offset         = new AtomicInteger(0x200);
         this.delayTimer     = new AtomicInteger();
         this.soundTimer     = new AtomicInteger();
-        this.keys           = new boolean[REGISTER_COUNT];
+        this.keys           = new ConcurrentHashMap<>();
+        this.readWriteLock  = new ReentrantReadWriteLock();
 
-        for (short i = 0; i < REGISTER_COUNT; ++i)
-            registers[i] = new Register(i);
+        for (int i = 0; i < REGISTER_COUNT; ++i) {
+            registers.put(i, new Register(i));
+            keys.put(i, Boolean.FALSE);
+        }
 
-        memory.position(offset);
+        memory.position(offset.get());
         new VRAM();
 
         Timer timer = new Timer(true);
         TimerTask task = new TimerTask() {
             @Override
             public void run() {
-                int delayTimerValue = delayTimer.get();
-                delayTimer.compareAndSet(delayTimerValue, Math.max(delayTimerValue - 1, 0));
+                int delayTimerValue;
+                do {
+                   delayTimerValue = delayTimer.get();
+                } while (!delayTimer.compareAndSet(delayTimerValue, Math.max(delayTimerValue - 1, 0)));
 
-                int soundTimerValue = soundTimer.get();
-                if (soundTimerValue != 0) {
-                    soundTimer.compareAndSet(soundTimerValue, Math.max(soundTimerValue - 1, 0));
+                int soundTimerValue;
+                do {
+                   soundTimerValue = soundTimer.get();
+                } while (!soundTimer.compareAndSet(soundTimerValue, Math.max(soundTimerValue - 1, 0)));
+
+                if (soundTimer.get() != 0) {
                     EventService.getInstance().postEvent(PlaySoundEvent.INSTANCE);
                 }
             }
@@ -82,46 +97,138 @@ public class ExecutionContext {
         timer.schedule(task, 0, Math.round(1000.0 / 60.0));
     }
 
-    public ByteBuffer getMemory() {
-        return memory;
+    /**
+     * sets new register value
+     * @param register new register value
+     */
+    public void setRegister(Register register) {
+        AsyncEventService.getInstance().postEvent(new ChangeRegisterValueEvent(register.getNumber(), register.getValue()));
+        this.registers.put(register.getNumber(), register);
     }
 
-    public Register[] getRegisters() {
-        return registers;
+    /**
+     * @param registerNumber register number
+     * @return register
+     */
+    public Register getRegister(int registerNumber) {
+        return this.registers.get(registerNumber);
     }
 
-    public IRegister getiRegister() {
-        return iRegister;
+    /**
+     * sets new index register value
+     *
+     * @param register new index register value
+     */
+    public void setIndexRegister(IRegister register) {
+        AsyncEventService.getInstance().postEvent(new ChangeIndexRegisterValue(register.getValue()));
+        IRegister oldValue;
+        do {
+            oldValue = iRegister.get();
+        } while (!iRegister.compareAndSet(oldValue, register));
     }
 
-    public Deque<Integer> getStack() {
-        return stack;
+    /**
+     * @return index register
+     */
+    public IRegister getIndexRegister() {
+        return this.iRegister.get();
     }
 
-    public int getDelayTimer() {
-        return delayTimer.get();
+    /**
+     * writes byte to memory
+     *
+     * @param offset offset
+     * @param value value
+     */
+    public void writeToMemory(int offset, byte value) {
+        try {
+            this.readWriteLock.writeLock().lock();
+            this.memory.put(offset, value);
+        } finally {
+            this.readWriteLock.writeLock().unlock();
+        }
+    }
+
+    /**
+     * writes byte to memory with current offset
+     *
+     * @param value value
+     */
+    public void writeToMemory(byte value) {
+        try {
+            this.readWriteLock.writeLock().lock();
+            this.memory.put(value);
+        } finally {
+            this.readWriteLock.writeLock().unlock();
+        }
+    }
+
+    /**
+     * @param offset memory offset
+     * @return value
+     */
+    public byte getMemoryValue(int offset) {
+        try {
+            this.readWriteLock.readLock().lock();
+            return this.memory.get(offset);
+        } finally {
+            this.readWriteLock.readLock().unlock();
+        }
+    }
+
+    public void pushToCallStack(int offset) {
+        this.stack.push(offset);
+    }
+
+    public void popCallStack() {
+        setOffset(this.stack.pop());
     }
 
     public void setDelayTimer(int delayTimer) {
-        int oldDelayTimerValue = this.delayTimer.get();
-        this.delayTimer.compareAndSet(oldDelayTimerValue, delayTimer);
+        int oldDelayTimerValue;
+        do {
+            oldDelayTimerValue = this.delayTimer.get();
+        } while (!this.delayTimer.compareAndSet(oldDelayTimerValue, delayTimer));
+    }
+
+    public int getDelayTimer() {
+        return this.delayTimer.get();
     }
 
     public void setSoundTimer(int soundTimer) {
-        int oldSoundTimerValue = this.soundTimer.get();
-        this.soundTimer.compareAndSet(oldSoundTimerValue, soundTimer);
+        int oldSoundTimerValue;
+        do {
+            oldSoundTimerValue = this.soundTimer.get();
+        } while(!this.soundTimer.compareAndSet(oldSoundTimerValue, soundTimer));
+    }
+
+    public int getSoundTimer() {
+        return soundTimer.get();
     }
 
     public int getOffset() {
-        return offset;
+        return offset.get();
     }
 
     public void setOffset(int offset) {
-        this.offset = (offset & 0xFFF);
+        int oldValue;
+        do {
+            oldValue = this.offset.get();
+        } while (!this.offset.compareAndSet(oldValue, offset));
     }
 
-    public boolean[] getKeys() {
-        return keys;
+    public void setKey(int key, boolean value) {
+        this.keys.put(key, value);
+    }
+
+    public boolean getKey(int key) {
+        return this.keys.get(key);
+    }
+
+    @Subscribe
+    @SuppressWarnings("unused")
+    public void handleChangeRegisterValueEvent(ChangeRegisterValueEvent event) {
+        setRegister(new Register(event.getRegisterNumber(), event.getValue()));
     }
 
     /**
@@ -130,9 +237,26 @@ public class ExecutionContext {
     @SuppressWarnings({"unused", "SpellCheckingInspection"})
     private class VRAM {
         private final boolean[][] vram;
+        private final int         screenWidth;
+        private final int         screenHeight;
 
+        /**
+         * ctor
+         */
         public VRAM() {
-            vram = new boolean[SCREEN_WIDTH][SCREEN_HEIGHT];
+            this(SCREEN_WIDTH, SCREEN_HEIGHT);
+        }
+
+        /**
+         * ctor
+         *
+         * @param screenWidth width of screen in pixels
+         * @param screenHeight height of screen in pixels
+         */
+        public VRAM(int screenWidth, int screenHeight) {
+            this.screenWidth    = screenWidth;
+            this.screenHeight   = screenHeight;
+            this.vram           = new boolean[screenWidth][screenHeight];
             EventService.getInstance().registerHandler(this);
         }
 
@@ -143,26 +267,26 @@ public class ExecutionContext {
          * @param y y coordinate
          * @param height height
          */
-        public void draw(int x, int y, int height) {
-            registers[0xF].setValue(0x0);
+        public synchronized void draw(int x, int y, int height) {
+            setRegister(new Register(0xF, 0x0));
 
             for(int j = 0; j < height; j++) {
-                int dat = (memory.get(j + iRegister.getValue())) & 0xFF;
+                int dat = (memory.get(j + iRegister.get().getValue())) & 0xFF;
                 for(int i = 0; i < 8; i++) {
                     if((dat & (0x80 >> i)) == 0) continue;
 
                     int rx = i + x;
                     int ry = j + y;
 
-                    if(rx >= SCREEN_WIDTH || ry >= SCREEN_HEIGHT) continue;
+                    if(rx >=  screenWidth|| ry >= screenHeight) continue;
 
                     if(vram[rx][ry])
-                        registers[0xF].setValue(0x1);
+                        setRegister(new Register(0xF, 0x1));
 
                     vram[rx][ry] ^= true;
                 }
             }
-            EventService.getInstance().postEvent(new RefreshScreenEvent(vram));
+            AsyncEventService.getInstance().postEvent(new RefreshScreenEvent(Arrays.copyOf(vram, vram.length)));
         }
 
         @Subscribe
@@ -173,11 +297,11 @@ public class ExecutionContext {
 
         @Subscribe
         @SuppressWarnings("unused")
-        public void handleClearEvent(ClearVRAMEvent event) {
+        public synchronized void handleClearEvent(ClearVRAMEvent event) {
             for (int i = 0; i < SCREEN_WIDTH; ++i)
                 for (int j = 0; j < SCREEN_HEIGHT; ++j)
                     vram[i][j] = false;
-            EventService.getInstance().postEvent(ClearScreenEvent.INSTANCE);
+            AsyncEventService.getInstance().postEvent(new RefreshScreenEvent(Arrays.copyOf(vram, vram.length)));
         }
     }
 }

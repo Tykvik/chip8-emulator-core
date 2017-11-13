@@ -20,25 +20,25 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.github.chip.emulator.core.opcodes;
-
-import com.github.chip.emulator.core.ExecutionContext;
-import org.apache.log4j.Logger;
+package com.github.chip.emulator.core.events;
 
 /**
- * 0xB opcode group handler
- * 0xBNNN - jump to the address NNN plus V0
- *
  * @author helloween
  */
-public class Opcode0xB implements Opcode {
-    private static final Logger LOGGER = Logger.getLogger(Opcode0xB.class);
+public class ChangeRegisterValueEvent {
+    private final int registerNumber;
+    private final int value;
 
-    @Override
-    public int execute(int opcode, ExecutionContext executionContext) {
-        int value = opcode & 0x0FFF;
-        LOGGER.trace(String.format("memory offset = V0(%#X) + %#X", executionContext.getRegister(0x0).getValue(), value));
-        executionContext.setOffset(executionContext.getRegister(0x0).getValue() + value);
-        return 0x0;
+    public ChangeRegisterValueEvent(int registerNumber, int value) {
+        this.registerNumber = registerNumber;
+        this.value = value;
+    }
+
+    public int getRegisterNumber() {
+        return registerNumber;
+    }
+
+    public int getValue() {
+        return value;
     }
 }

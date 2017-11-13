@@ -22,7 +22,7 @@ public class Opcode0xATest {
         int opcode = 0x0123;
         ExecutionContext context = new ExecutionContext();
         opcodeHandler.execute(opcode, context);
-        assertEquals(0x123, context.getiRegister().getValue());
+        assertEquals(0x123, context.getIndexRegister().getValue());
     }
 
 }

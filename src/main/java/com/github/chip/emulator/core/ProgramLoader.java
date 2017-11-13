@@ -28,6 +28,7 @@ import java.nio.ByteBuffer;
 /**
  * @author helloween
  */
+@SuppressWarnings("unused")
 public class ProgramLoader {
     /**
      * @param fileName ROM file name

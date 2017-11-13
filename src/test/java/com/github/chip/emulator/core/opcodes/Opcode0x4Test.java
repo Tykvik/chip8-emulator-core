@@ -1,6 +1,7 @@
 package com.github.chip.emulator.core.opcodes;
 
 import com.github.chip.emulator.core.ExecutionContext;
+import com.github.chip.emulator.core.Register;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -22,10 +23,10 @@ public class Opcode0x4Test {
         int opcode = 0x02FF;
         ExecutionContext context = new ExecutionContext();
         int offset = context.getOffset();
-        context.getRegisters()[2].setValue(0xFF);
+        context.setRegister(new Register(0x2, 0xFF));
         opcodeHandler.execute(opcode, context);
         assertEquals(offset, context.getOffset());
-        context.getRegisters()[2].setValue(0xF0);
+        context.setRegister(new Register(0x2, 0xF0));
         assertEquals(Opcode.OPCODE_SIZE * 2, opcodeHandler.execute(opcode, context));
     }
 }

@@ -30,6 +30,13 @@ public class DrawEvent {
     private final int y;
     private final int height;
 
+    /**
+     * ctor
+     *
+     * @param x x position
+     * @param y y position
+     * @param height height
+     */
     public DrawEvent(int x, int y, int height) {
         this.x      = x;
         this.y      = y;

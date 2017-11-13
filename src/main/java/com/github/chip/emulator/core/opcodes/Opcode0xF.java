@@ -53,7 +53,7 @@ public class Opcode0xF extends RegisterBasedOpcode {
         switch (opcode & 0x00FF) {
             case 0x07: {
                 LOGGER.trace(String.format("V%d = delayTimer", register.getNumber()));
-                register.setValue(executionContext.getDelayTimer());
+                executionContext.setRegister(new Register(register.getNumber(), executionContext.getDelayTimer()));
                 break;
             }
             case 0x0A: {
@@ -72,46 +72,43 @@ public class Opcode0xF extends RegisterBasedOpcode {
             }
             case 0x1E: {
                 LOGGER.trace(String.format("I += V%d", register.getNumber()));
-                executionContext.getRegisters()[0xF].setValue(executionContext.getiRegister().add(register) ? 0x1 : 0x0);
+                executionContext.setIndexRegister(executionContext.getIndexRegister().add(register));
+                executionContext.setRegister(new Register(0xF, executionContext.getIndexRegister().getValue() + register.getValue() > 0xFFF ? 0x1 : 0x0));
                 break;
             }
             case 0x29: {
                 LOGGER.trace(String.format("I = sprite_addr[V%d]", register.getNumber()));
-                executionContext.getiRegister().setValue(register.getValue() * 5);
+                executionContext.setIndexRegister(new IRegister(register.getValue() * 5));
                 break;
             }
             case 0x33: {
                 LOGGER.trace("BCD");
-                ByteBuffer memory       = executionContext.getMemory();
-                IRegister  iRegister    = executionContext.getiRegister();
+                IRegister  iRegister = executionContext.getIndexRegister();
 
-                memory.put(iRegister.getValue(),        (byte) ((register.getValue() / 100) & 0xFF));
-                memory.put(iRegister.getValue() + 1,  (byte) (((register.getValue() / 10) % 10) & 0xFF));
-                memory.put(iRegister.getValue() + 2,  (byte) (((register.getValue() % 100) % 10) & 0xFF));
+                executionContext.writeToMemory(iRegister.getValue(),        (byte) ((register.getValue() / 100) & 0xFF));
+                executionContext.writeToMemory(iRegister.getValue() + 1,    (byte) (((register.getValue() / 10) % 10) & 0xFF));
+                executionContext.writeToMemory(iRegister.getValue() + 2,    (byte) (((register.getValue() % 100) % 10) & 0xFF));
                 break;
             }
             case 0x55: {
                 LOGGER.trace("reg_dump(Vx, &I)");
-                ByteBuffer memory       = executionContext.getMemory();
-                IRegister  iRegister    = executionContext.getiRegister();
+                IRegister  iRegister = executionContext.getIndexRegister();
 
                 for (int i = 0; i <= register.getNumber(); ++i) {
-                    memory.put(iRegister.getValue() + i, (byte) executionContext.getRegisters()[i].getValue());
+                    executionContext.writeToMemory(iRegister.getValue() + i, (byte) executionContext.getRegister(i).getValue());
                 }
-                iRegister.add(register.getNumber() + 1);
+                executionContext.setIndexRegister(new IRegister(register.getNumber() + 1));
 
                 break;
             }
             case 0x65: {
                 LOGGER.trace("reg_load(Vx, &I)");
-                ByteBuffer memory       = executionContext.getMemory();
-                IRegister  iRegister    = executionContext.getiRegister();
+                IRegister  iRegister = executionContext.getIndexRegister();
 
                 for (int i = 0; i <= register.getNumber(); ++i) {
-                    executionContext.getRegisters()[i].setValue(memory.get(iRegister.getValue() + i));
+                    executionContext.setRegister(new Register(i, executionContext.getMemoryValue(iRegister.getValue() + i)));
                 }
-                iRegister.add(register.getNumber() + 1);
-
+                executionContext.setIndexRegister(new IRegister(register.getNumber() + 1));
                 break;
             }
             default:

@@ -23,6 +23,7 @@
 package com.github.chip.emulator.core.opcodes;
 
 import com.github.chip.emulator.core.ExecutionContext;
+import com.github.chip.emulator.core.IRegister;
 import org.apache.log4j.Logger;
 
 /**
@@ -38,7 +39,7 @@ public class Opcode0xA implements Opcode {
     public int execute(int opcode, ExecutionContext executionContext) {
         int value = opcode & 0x0FFF;
         LOGGER.trace(String.format("I = %#X", value));
-        executionContext.getiRegister().setValue(value);
+        executionContext.setIndexRegister(new IRegister(value));
         return OPCODE_SIZE;
     }
 }

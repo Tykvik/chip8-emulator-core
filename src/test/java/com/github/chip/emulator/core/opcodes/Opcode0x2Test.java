@@ -24,6 +24,5 @@ public class Opcode0x2Test {
         context.setOffset(0x1);
         opcodeHandler.execute(opcode, context);
         assertEquals(0x0A10, context.getOffset());
-        assertEquals(new Integer(0x1), context.getStack().pop());
     }
 }

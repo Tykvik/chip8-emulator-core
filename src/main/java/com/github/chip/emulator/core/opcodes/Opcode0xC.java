@@ -42,7 +42,7 @@ public class Opcode0xC extends RegisterBasedOpcode {
     public int execute(Register register, int opcode, ExecutionContext executionContext) {
         int value = random.nextInt(0xFF) & (opcode & 0x00FF);
         LOGGER.trace(String.format("V%d = rand() & %#X", register.getNumber(), value));
-        register.setValue(value);
+        executionContext.setRegister(new Register(register.getNumber(), value));
         return OPCODE_SIZE;
     }
 }

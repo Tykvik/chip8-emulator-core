@@ -34,7 +34,11 @@ public class IRegister {
      * ctor
      */
     public IRegister() {
-        this.value = 0x0;
+        this(0x0);
+    }
+
+    public IRegister(int value) {
+        this.value = value & 0xFFF;
     }
 
     /**
@@ -45,32 +49,20 @@ public class IRegister {
     }
 
     /**
-     * @param value new register value
-     */
-    public void setValue(int value) {
-        this.value = value;
-        this.value &= 0xFFF;
-    }
-
-    /**
      * add value to register
      *
      * @param value added value
-     * @return carry flag
      */
-    public boolean add(int value) {
-        int result = this.value + value;
-        this.value = result & 0xFFF;
-        return result > 0xFFF;
+    public IRegister add(int value) {
+        return new IRegister(this.value + value);
     }
 
     /**
      * add register value to register
      *
      * @param register register
-     * @return carry flag
      */
-    public boolean add(Register register) {
+    public IRegister add(Register register) {
         return add(register.getValue());
     }
 }

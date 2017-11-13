@@ -28,8 +28,8 @@ package com.github.chip.emulator.core;
  * @author helloween
  */
 public class Register {
-    private int     number;
-    private int     value;
+    private final int number;
+    private final int value;
 
     /**
      * ctor
@@ -39,6 +39,17 @@ public class Register {
     public Register(int number) {
         this.number = number;
         this.value  = 0x0;
+    }
+
+    /**
+     * ctor
+     *
+     * @param number register number
+     * @param value register value
+     */
+    public Register(int number, int value) {
+        this.number = number;
+        this.value  = value & 0xFF;
     }
 
     /**
@@ -56,31 +67,21 @@ public class Register {
     }
 
     /**
-     * @param value register value
-     */
-    public void setValue(int value) {
-        this.value = value & 0xFF;
-    }
-
-    /**
      * add value to register
      *
      * @param value added value
-     * @return carry flag
      */
-    public boolean add(int value) {
+    public Register add(int value) {
         int result = this.value + value;
-        this.value = result & 0xFF;
-        return result > 0xFF;
+        return new Register(this.number, result);
     }
 
     /**
      * add register value to register
      *
      * @param register register
-     * @return carry flag
      */
-    public boolean add(Register register) {
+    public Register add(Register register) {
         return add(register.getValue());
     }
 
@@ -88,13 +89,9 @@ public class Register {
      * subtracts register from register
      *
      * @param register register
-     * @return borrow flag
      */
-    public boolean sub(Register register) {
-        boolean borrow = this.value < register.getValue();
-        this.value -= register.getValue();
-        this.value &= 0xFF;
-        return borrow;
+    public Register sub(Register register) {
+        return new Register(this.number, this.value - register.getValue());
     }
 
     /**
@@ -102,9 +99,8 @@ public class Register {
      *
      * @param register register
      */
-    public void or(Register register) {
-        this.value |= register.getValue();
-        this.value &= 0xFF;
+    public Register or(Register register) {
+        return new Register(this.number, this.value | register.getValue());
     }
 
     /**
@@ -112,9 +108,8 @@ public class Register {
      *
      * @param register register
      */
-    public void and(Register register) {
-        this.value &= register.getValue();
-        this.value &= 0xFF;
+    public Register and(Register register) {
+        return new Register(this.number, this.value & register.getValue());
     }
 
     /**
@@ -122,33 +117,21 @@ public class Register {
      *
      * @param register register
      */
-    public void xor(Register register) {
-        this.value ^= register.getValue();
-        this.value &= 0xFF;
+    public Register xor(Register register) {
+        return new Register(this.number, this.value ^ register.getValue());
     }
 
     /**
      * shifts register value right by count
-     *
-     * @param count shift count
-     * @return least bit
      */
-    public int rightShift(int count) {
-        int leastBit = this.value & 0x1;
-        this.value >>= count;
-        return leastBit;
+    public Register rightShift() {
+        return new Register(this.number, this.value >> 1);
     }
 
     /**
      * shifts register value left by count
-     *
-     * @param count shift count
-     * @return most bit
      */
-    public int leftShift(int count) {
-        int mostBit = (this.value & 0x80) >> 7;
-        this.value <<= count;
-        this.value &= 0xFF;
-        return mostBit;
+    public Register leftShift() {
+        return new Register(this.number, this.value << 1);
     }
 }

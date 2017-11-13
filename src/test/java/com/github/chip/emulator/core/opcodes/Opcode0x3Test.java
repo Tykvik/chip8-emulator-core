@@ -1,6 +1,7 @@
 package com.github.chip.emulator.core.opcodes;
 
 import com.github.chip.emulator.core.ExecutionContext;
+import com.github.chip.emulator.core.Register;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -21,9 +22,9 @@ public class Opcode0x3Test {
     public void execute() throws Exception {
         int opcode = 0x02FF;
         ExecutionContext context = new ExecutionContext();
-        context.getRegisters()[2].setValue(0xFF);
+        context.setRegister(new Register(0x2, 0xFF));
         assertEquals(Opcode.OPCODE_SIZE * 2, opcodeHandler.execute(opcode, context));
-        context.getRegisters()[2].setValue(0xF0);
+        context.setRegister(new Register(0x2, 0xF0));
         assertEquals(Opcode.OPCODE_SIZE, opcodeHandler.execute(opcode, context));
     }
 }

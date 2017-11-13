@@ -42,16 +42,17 @@ public class Opcode0xE extends RegisterBasedOpcode {
         switch (opcode & 0x00FF) {
             case 0x9E : {
                 LOGGER.trace(String.format("key == V%d", register.getNumber()));
-                if(executionContext.getKeys()[register.getValue()]) {
-                    executionContext.getKeys()[register.getValue()] = false;
+                if(executionContext.getKey(register.getValue())) {
+                    executionContext.setKey(register.getValue(), false);
                     return OPCODE_SIZE * 2;
                 }
                 break;
             }
             case 0xA1 : {
                 LOGGER.trace(String.format("key != V%d", register.getNumber()));
-                if(!executionContext.getKeys()[register.getValue()])
+                if(!executionContext.getKey(register.getValue()))
                     return OPCODE_SIZE * 2;
+                executionContext.setKey(register.getValue(), false);
                 break;
             }
             default:

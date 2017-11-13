@@ -22,7 +22,9 @@
  */
 package com.github.chip.emulator.core;
 
+import com.github.chip.emulator.core.events.PressKeyEvent;
 import com.github.chip.emulator.core.opcodes.*;
+import com.github.chip.emulator.core.services.EventService;
 import org.apache.log4j.Logger;
 
 import java.nio.ByteBuffer;
@@ -32,6 +34,7 @@ import java.util.Map;
 /**
  * @author helloween
  */
+@SuppressWarnings("unused")
 public class ProgramExecutor implements Runnable {
     private static final Logger LOGGER = Logger.getLogger(ProgramExecutor.class);
 
@@ -69,7 +72,8 @@ public class ProgramExecutor implements Runnable {
 
         programBuffer.rewind();
         while (programBuffer.hasRemaining())
-            executionContext.getMemory().put(programBuffer.get());
+            executionContext.writeToMemory(programBuffer.get());
+        EventService.getInstance().registerHandler(this);
     }
 
     @Override
@@ -90,10 +94,13 @@ public class ProgramExecutor implements Runnable {
         }
     }
 
-    private int readOpcode() {
-        final ByteBuffer memory = executionContext.getMemory();
-        final int offset = executionContext.getOffset();
+    @SuppressWarnings("unused")
+    public void handleKeyPressEvent(PressKeyEvent event) {
+        executionContext.setKey(event.getKeyNumber(), true);
+    }
 
-        return ((memory.get(offset) << 8) | (memory.get(offset + 1) & 0x00FF)) & 0xFFFF;
+    private int readOpcode() {
+        final int offset = executionContext.getOffset();
+        return ((executionContext.getMemoryValue(offset) << 8) | (executionContext.getMemoryValue(offset + 1) & 0x00FF)) & 0xFFFF;
     }
 }

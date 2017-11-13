@@ -25,6 +25,14 @@ package com.github.chip.emulator.core.events;
 /**
  * @author helloween
  */
-public enum  ClearScreenEvent {
-    INSTANCE
+public class PressKeyEvent {
+    private final int keyNumber;
+
+    public PressKeyEvent(int keyNumber) {
+        this.keyNumber = keyNumber;
+    }
+
+    public int getKeyNumber() {
+        return keyNumber;
+    }
 }

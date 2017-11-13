@@ -37,7 +37,7 @@ public abstract class RegisterBasedOpcode implements Opcode {
         int register = (opcode & 0x0F00) >> 8;
         checkRegisterRange(register);
 
-        return execute(executionContext.getRegisters()[register], opcode, executionContext);
+        return execute(executionContext.getRegister(register), opcode, executionContext);
     }
 
     protected abstract int execute(Register register, int opcode, ExecutionContext executionContext) throws UnsupportedOpcodeException, InvalidRegisterNumberException;

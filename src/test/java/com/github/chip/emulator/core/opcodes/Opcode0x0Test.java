@@ -23,10 +23,9 @@ public class Opcode0x0Test {
     public void execute() throws Exception {
         int opcode = 0xEE;
         ExecutionContext context = new ExecutionContext();
-        context.getStack().push(0x1);
+        context.pushToCallStack(0x1);
         opcodeHandler.execute(opcode, context);
         assertEquals(0x1, context.getOffset());
-        assertTrue(context.getStack().isEmpty());
     }
 
     @Test(expected = UnsupportedOpcodeException.class)

@@ -36,7 +36,7 @@ public abstract class TwoRegistersBasedOpcode extends RegisterBasedOpcode {
         int secondRegister = (opcode & 0x00F0) >> 4;
         checkRegisterRange(secondRegister);
 
-        return execute(register, executionContext.getRegisters()[secondRegister], opcode, executionContext);
+        return execute(register, executionContext.getRegister(secondRegister), opcode, executionContext);
     }
 
     protected abstract int execute(Register firstRegister, Register secondRegister, int opcode, ExecutionContext executionContext) throws UnsupportedOpcodeException;

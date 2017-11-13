@@ -48,7 +48,7 @@ public class Opcode0x0 implements Opcode {
             }
             case 0x00EE: {
                 LOGGER.trace("return from a subroutine");
-                executionContext.setOffset(executionContext.getStack().pop());
+                executionContext.popCallStack();
                 break;
             }
             default:

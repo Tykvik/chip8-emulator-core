@@ -39,7 +39,7 @@ public class Opcode0x7 extends RegisterBasedOpcode {
     public int execute(Register register, int opcode, ExecutionContext executionContext) {
         int value = opcode & 0x00FF;
         LOGGER.trace(String.format("add %#X to V%d", value, register.getNumber()));
-        register.add(value);
+        executionContext.setRegister(register.add(value));
         return OPCODE_SIZE;
     }
 }

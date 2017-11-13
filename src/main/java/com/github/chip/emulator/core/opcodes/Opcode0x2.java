@@ -38,7 +38,7 @@ public class Opcode0x2 implements Opcode {
     public int execute(int opcode, ExecutionContext executionContext) {
         int address = opcode & 0x0FFF;
         LOGGER.trace(String.format("call subroutine %#X", address));
-        executionContext.getStack().push(executionContext.getOffset());
+        executionContext.pushToCallStack(executionContext.getOffset());
         executionContext.setOffset(address);
         return 0x0;
     }
