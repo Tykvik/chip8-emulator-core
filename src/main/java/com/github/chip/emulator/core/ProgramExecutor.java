@@ -22,7 +22,10 @@
  */
 package com.github.chip.emulator.core;
 
+import com.github.chip.emulator.core.events.PauseEvent;
 import com.github.chip.emulator.core.events.PressKeyEvent;
+import com.github.chip.emulator.core.events.SetDelayEvent;
+import com.github.chip.emulator.core.events.StopEvent;
 import com.github.chip.emulator.core.opcodes.*;
 import com.github.chip.emulator.core.services.EventService;
 import com.google.common.eventbus.Subscribe;
@@ -31,6 +34,7 @@ import org.apache.log4j.Logger;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author helloween
@@ -41,7 +45,9 @@ public class ProgramExecutor implements Runnable {
 
     private final ExecutionContext          executionContext;
     private final Map<Integer, Opcode>      opcodeMap;
-    private final int                       delay;
+    private final AtomicInteger             delay;
+    private volatile boolean                stopFlag;
+    private volatile boolean                pauseFlag;
 
     /**
      * ctor
@@ -51,7 +57,9 @@ public class ProgramExecutor implements Runnable {
      */
     public ProgramExecutor(ByteBuffer programBuffer, int delayInMillis) {
         this.executionContext   = new ExecutionContext();
-        this.delay              = delayInMillis;
+        this.delay              = new AtomicInteger(delayInMillis);
+        this.stopFlag           = false;
+        this.pauseFlag          = false;
 
         opcodeMap = new HashMap<>();
         opcodeMap.put(0x0000, new Opcode0x0());
@@ -81,7 +89,13 @@ public class ProgramExecutor implements Runnable {
     public void run() {
         try {
             for (;;) {
-                Thread.sleep(delay);
+                if (stopFlag)
+                    return;
+
+                while (pauseFlag)
+                    Thread.yield();
+
+                Thread.sleep(delay.get());
                 int opcode = readOpcode();
 
                 if (opcode == 0x0)
@@ -92,6 +106,7 @@ public class ProgramExecutor implements Runnable {
             }
         } catch (Exception e) {
             LOGGER.error(e);
+            return;
         }
     }
 
@@ -99,6 +114,27 @@ public class ProgramExecutor implements Runnable {
     @Subscribe
     public void handleKeyPressEvent(PressKeyEvent event) {
         executionContext.setKey(event.getKeyNumber(), true);
+    }
+
+    @SuppressWarnings("unused")
+    @Subscribe
+    public void handleSetDelayEvent(SetDelayEvent event) {
+        int oldValue;
+        do {
+            oldValue = delay.get();
+        } while (!this.delay.compareAndSet(oldValue, event.getDelay()));
+    }
+
+    @SuppressWarnings("unused")
+    @Subscribe
+    public void handleStopEvent(StopEvent event) {
+        this.stopFlag = true;
+    }
+
+    @SuppressWarnings("unused")
+    @Subscribe
+    public void handlePauseEvent(PauseEvent event) {
+        this.pauseFlag = event.isPauseFlag();
     }
 
     private int readOpcode() {

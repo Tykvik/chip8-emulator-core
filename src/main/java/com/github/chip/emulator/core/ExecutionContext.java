@@ -89,7 +89,7 @@ public class ExecutionContext {
                 } while (!soundTimer.compareAndSet(soundTimerValue, Math.max(soundTimerValue - 1, 0)));
 
                 if (soundTimer.get() != 0) {
-                    EventService.getInstance().postEvent(PlaySoundEvent.INSTANCE);
+                    AsyncEventService.getInstance().postEvent(PlaySoundEvent.INSTANCE);
                 }
             }
         };

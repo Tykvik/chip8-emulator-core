@@ -20,39 +20,19 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.github.chip.emulator.core.services;
-
-import com.google.common.eventbus.AsyncEventBus;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
-
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+package com.github.chip.emulator.core.events;
 
 /**
  * @author helloween
  */
-public class AsyncEventService {
-    private static final AsyncEventService INSTANCE = new AsyncEventService();
+public class SetDelayEvent {
+    private final int delay;
 
-    private final AsyncEventBus eventBus;
-
-    private AsyncEventService() {
-        ThreadFactoryBuilder builder = new ThreadFactoryBuilder();
-        builder.setDaemon(true).setNameFormat("async-event-bus-worker-%d");
-        eventBus = new AsyncEventBus(new ThreadPoolExecutor(1, 1, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue(), builder.build()));
+    public SetDelayEvent(int delay) {
+        this.delay = delay;
     }
 
-    public static AsyncEventService getInstance() {
-        return INSTANCE;
-    }
-
-    @SuppressWarnings("unused")
-    public void registerHandler(Object handler) {
-        eventBus.register(handler);
-    }
-
-    public void postEvent(Object event) {
-        eventBus.post(event);
+    public int getDelay() {
+        return delay;
     }
 }
