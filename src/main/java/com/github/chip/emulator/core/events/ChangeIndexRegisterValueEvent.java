@@ -25,10 +25,10 @@ package com.github.chip.emulator.core.events;
 /**
  * @author helloween
  */
-public class ChangeIndexRegisterValue {
+public class ChangeIndexRegisterValueEvent {
     private final int value;
 
-    public ChangeIndexRegisterValue(int value) {
+    public ChangeIndexRegisterValueEvent(int value) {
         this.value = value;
     }
 

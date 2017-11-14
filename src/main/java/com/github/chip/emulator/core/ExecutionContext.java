@@ -120,7 +120,7 @@ public class ExecutionContext {
      * @param register new index register value
      */
     public void setIndexRegister(IRegister register) {
-        AsyncEventService.getInstance().postEvent(new ChangeIndexRegisterValue(register.getValue()));
+        AsyncEventService.getInstance().postEvent(new ChangeIndexRegisterValueEvent(register.getValue()));
         IRegister oldValue;
         do {
             oldValue = iRegister.get();
@@ -223,12 +223,6 @@ public class ExecutionContext {
 
     public boolean getKey(int key) {
         return this.keys.get(key);
-    }
-
-    @Subscribe
-    @SuppressWarnings("unused")
-    public void handleChangeRegisterValueEvent(ChangeRegisterValueEvent event) {
-        setRegister(new Register(event.getRegisterNumber(), event.getValue()));
     }
 
     /**

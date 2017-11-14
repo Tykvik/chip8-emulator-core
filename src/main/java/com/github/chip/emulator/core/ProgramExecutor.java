@@ -25,6 +25,7 @@ package com.github.chip.emulator.core;
 import com.github.chip.emulator.core.events.PressKeyEvent;
 import com.github.chip.emulator.core.opcodes.*;
 import com.github.chip.emulator.core.services.EventService;
+import com.google.common.eventbus.Subscribe;
 import org.apache.log4j.Logger;
 
 import java.nio.ByteBuffer;
@@ -95,6 +96,7 @@ public class ProgramExecutor implements Runnable {
     }
 
     @SuppressWarnings("unused")
+    @Subscribe
     public void handleKeyPressEvent(PressKeyEvent event) {
         executionContext.setKey(event.getKeyNumber(), true);
     }

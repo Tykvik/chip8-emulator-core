@@ -42,6 +42,7 @@ public class AsyncEventService {
         return INSTANCE;
     }
 
+    @SuppressWarnings("unused")
     public void registerHandler(Object handler) {
         eventBus.register(handler);
     }

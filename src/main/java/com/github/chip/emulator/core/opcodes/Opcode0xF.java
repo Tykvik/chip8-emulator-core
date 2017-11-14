@@ -28,8 +28,6 @@ import com.github.chip.emulator.core.Register;
 import com.github.chip.emulator.core.exceptions.UnsupportedOpcodeException;
 import org.apache.log4j.Logger;
 
-import java.nio.ByteBuffer;
-
 /**
  * 0xF opcode group handler
  * 0xFX07 - set VX to the value of the delay timer
@@ -83,7 +81,7 @@ public class Opcode0xF extends RegisterBasedOpcode {
             }
             case 0x33: {
                 LOGGER.trace("BCD");
-                IRegister  iRegister = executionContext.getIndexRegister();
+                IRegister iRegister = executionContext.getIndexRegister();
 
                 executionContext.writeToMemory(iRegister.getValue(),        (byte) ((register.getValue() / 100) & 0xFF));
                 executionContext.writeToMemory(iRegister.getValue() + 1,    (byte) (((register.getValue() / 10) % 10) & 0xFF));
@@ -92,7 +90,7 @@ public class Opcode0xF extends RegisterBasedOpcode {
             }
             case 0x55: {
                 LOGGER.trace("reg_dump(Vx, &I)");
-                IRegister  iRegister = executionContext.getIndexRegister();
+                IRegister iRegister = executionContext.getIndexRegister();
 
                 for (int i = 0; i <= register.getNumber(); ++i) {
                     executionContext.writeToMemory(iRegister.getValue() + i, (byte) executionContext.getRegister(i).getValue());
@@ -103,7 +101,7 @@ public class Opcode0xF extends RegisterBasedOpcode {
             }
             case 0x65: {
                 LOGGER.trace("reg_load(Vx, &I)");
-                IRegister  iRegister = executionContext.getIndexRegister();
+                IRegister iRegister = executionContext.getIndexRegister();
 
                 for (int i = 0; i <= register.getNumber(); ++i) {
                     executionContext.setRegister(new Register(i, executionContext.getMemoryValue(iRegister.getValue() + i)));
