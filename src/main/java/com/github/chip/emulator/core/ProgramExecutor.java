@@ -79,6 +79,7 @@ public class ProgramExecutor implements Runnable {
         opcodeMap.put(0xE000, new Opcode0xE());
         opcodeMap.put(0xF000, new Opcode0xF());
 
+        new FontLoader(this.executionContext).load();
         programBuffer.rewind();
         while (programBuffer.hasRemaining())
             executionContext.writeToMemory(programBuffer.get());
