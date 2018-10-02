@@ -26,21 +26,34 @@ import com.github.chip.emulator.core.ExecutionContext;
 import com.github.chip.emulator.core.exceptions.InvalidRegisterNumberException;
 import com.github.chip.emulator.core.exceptions.UnsupportedOpcodeException;
 
+import java.util.List;
+
 /**
  * opcode handler
  *
  * @author helloween
  */
 public interface Opcode {
-    int OPCODE_SIZE = 0x2;
-
     /**
      * handle opcode
      *
-     * @param opcode opcode
      * @param executionContext execution context
      * @return program counter offset
-     * @throws UnsupportedOpcodeException
      */
-    int execute(int opcode, ExecutionContext executionContext) throws UnsupportedOpcodeException, InvalidRegisterNumberException;
+    int execute(ExecutionContext executionContext) throws UnsupportedOpcodeException, InvalidRegisterNumberException;
+
+    /**
+     * @return instruction
+     */
+    Instruction getInstruction();
+
+    /**
+     * @return raw opcode value
+     */
+    int getRawOpcode();
+
+    /**
+     * @return instruction arguments
+     */
+    List<String> getArguments();
 }

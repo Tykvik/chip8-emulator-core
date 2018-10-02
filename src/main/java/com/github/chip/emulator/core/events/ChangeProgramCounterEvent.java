@@ -20,32 +20,19 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.github.chip.emulator.core.opcodes;
-
-import com.github.chip.emulator.core.ExecutionContext;
-import com.github.chip.emulator.core.Register;
-
-import static com.github.chip.emulator.core.opcodes.Instruction.ADD;
+package com.github.chip.emulator.core.events;
 
 /**
- * 0x7 opcode group handler
- * 0x7XNN - add NN to VX
- *
  * @author helloween
  */
-public class Opcode0x7 extends RegisterBasedOpcode {
+public class ChangeProgramCounterEvent {
+    private final int value;
 
-    private Opcode0x7(int opcode) {
-        super(opcode, ADD, opcode & 0x00FF);
+    public ChangeProgramCounterEvent(int value) {
+        this.value = value;
     }
 
-    public static Opcode newInstance(int opcode) {
-        return new Opcode0x7(opcode);
-    }
-
-    @Override
-    public int execute(Register register, ExecutionContext executionContext) {
-        executionContext.setRegister(register.add(getOpcode() & 0x00FF));
-        return OPCODE_SIZE;
+    public int getValue() {
+        return value;
     }
 }

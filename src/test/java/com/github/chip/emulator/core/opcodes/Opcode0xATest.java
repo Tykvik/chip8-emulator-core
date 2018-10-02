@@ -1,28 +1,20 @@
 package com.github.chip.emulator.core.opcodes;
 
 import com.github.chip.emulator.core.ExecutionContext;
-import org.junit.Before;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 /**
  * @author helloween
  */
 public class Opcode0xATest {
-    private Opcode opcodeHandler;
-
-    @Before
-    public void setUp() throws Exception {
-        opcodeHandler = new Opcode0xA();
-    }
-
     @Test
     public void execute() throws Exception {
         int opcode = 0x0123;
+        Opcode opcodeHandler = Opcode0xA.newInstance(opcode);
         ExecutionContext context = new ExecutionContext();
-        opcodeHandler.execute(opcode, context);
+        opcodeHandler.execute(context);
         assertEquals(0x123, context.getIndexRegister().getValue());
     }
-
 }

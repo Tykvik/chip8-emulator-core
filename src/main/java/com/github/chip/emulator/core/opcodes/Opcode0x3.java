@@ -24,7 +24,8 @@ package com.github.chip.emulator.core.opcodes;
 
 import com.github.chip.emulator.core.ExecutionContext;
 import com.github.chip.emulator.core.Register;
-import org.apache.log4j.Logger;
+
+import static com.github.chip.emulator.core.opcodes.Instruction.SE;
 
 /**
  * 0x3 opcode group handler
@@ -33,13 +34,18 @@ import org.apache.log4j.Logger;
  * @author helloween
  */
 public class Opcode0x3 extends RegisterBasedOpcode {
-    private static final Logger LOGGER = Logger.getLogger(Opcode0x3.class);
+
+    private Opcode0x3(int opcode) {
+        super(opcode, SE, opcode & 0x00FF);
+    }
+
+    public static Opcode newInstance(int opcode) {
+        return new Opcode0x3(opcode);
+    }
 
     @Override
-    public int execute(Register register, int opcode, ExecutionContext executionContext) {
-        int value = opcode & 0x00FF;
-        LOGGER.trace(String.format("condition V%d == %#X", register.getNumber(), value));
-        if (register.getValue() == value)
+    public int execute(Register register, ExecutionContext executionContext) {
+        if (register.getValue() == (getOpcode() & 0x00FF))
             return OPCODE_SIZE * 2;
         return OPCODE_SIZE;
     }

@@ -5,7 +5,6 @@ import com.github.chip.emulator.core.events.ClearVRAMEvent;
 import com.github.chip.emulator.core.exceptions.UnsupportedOpcodeException;
 import com.github.chip.emulator.core.services.EventService;
 import com.google.common.eventbus.Subscribe;
-import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -18,33 +17,31 @@ public class Opcode0x0Test {
     private Opcode opcodeHandler;
     private boolean clearVramEventCalled;
 
-    @Before
-    public void init() {
-        opcodeHandler = new Opcode0x0();
-    }
-
     @Test
     public void execute() throws Exception {
         int opcode = 0xEE;
+        opcodeHandler = Opcode0x0.newInstance(opcode);
         ExecutionContext context = new ExecutionContext();
         context.pushToCallStack(0x1);
-        opcodeHandler.execute(opcode, context);
+        opcodeHandler.execute(context);
         assertEquals(0x1, context.getOffset());
     }
 
     @Test(expected = UnsupportedOpcodeException.class)
     public void execute2() throws Exception {
         int opcode = 0xEF;
-        opcodeHandler.execute(opcode, new ExecutionContext());
+        opcodeHandler = Opcode0x0.newInstance(opcode);
+        opcodeHandler.execute(new ExecutionContext());
     }
 
     @Test
     public void execute3() throws Exception {
         int opcode = 0xE0;
+        opcodeHandler = Opcode0x0.newInstance(opcode);
         ExecutionContext context = new ExecutionContext();
         clearVramEventCalled = false;
         new ClearVRAMEventListener();
-        opcodeHandler.execute(opcode, context);
+        opcodeHandler.execute(context);
         assertTrue(clearVramEventCalled);
     }
 

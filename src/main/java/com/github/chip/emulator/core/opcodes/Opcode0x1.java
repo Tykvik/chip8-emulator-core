@@ -23,7 +23,9 @@
 package com.github.chip.emulator.core.opcodes;
 
 import com.github.chip.emulator.core.ExecutionContext;
-import org.apache.log4j.Logger;
+
+import static com.github.chip.emulator.core.formats.Formats.ADDRESS_VALUE_FORMAT;
+import static com.github.chip.emulator.core.opcodes.Instruction.JP;
 
 /**
  * 0x1 opcode group handler
@@ -31,14 +33,19 @@ import org.apache.log4j.Logger;
  *
  * @author helloween
  */
-public class Opcode0x1 implements Opcode {
-    private static final Logger LOGGER = Logger.getLogger(Opcode0x1.class);
+public class Opcode0x1 extends AbstractOpcode {
+
+    private Opcode0x1(int opcode) {
+        super(opcode, JP, ADDRESS_VALUE_FORMAT.format(opcode & 0x0FFF));
+    }
+
+    public static Opcode newInstance(int opcode) {
+        return new Opcode0x1(opcode);
+    }
 
     @Override
-    public int execute(int opcode, ExecutionContext executionContext) {
-        int address = opcode & 0x0FFF;
-        LOGGER.trace(String.format("jump to address %#X", address));
-        executionContext.setOffset(address);
+    public int execute(ExecutionContext executionContext) {
+        executionContext.setOffset(getOpcode() & 0x0FFF);
         return 0x0;
     }
 }

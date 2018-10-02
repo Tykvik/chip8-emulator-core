@@ -23,7 +23,9 @@
 package com.github.chip.emulator.core.opcodes;
 
 import com.github.chip.emulator.core.ExecutionContext;
-import org.apache.log4j.Logger;
+
+import static com.github.chip.emulator.core.formats.Formats.ADDRESS_VALUE_FORMAT;
+import static com.github.chip.emulator.core.opcodes.Instruction.JP;
 
 /**
  * 0xB opcode group handler
@@ -31,14 +33,18 @@ import org.apache.log4j.Logger;
  *
  * @author helloween
  */
-public class Opcode0xB implements Opcode {
-    private static final Logger LOGGER = Logger.getLogger(Opcode0xB.class);
+public class Opcode0xB extends AbstractOpcode {
+    private Opcode0xB(int opcode) {
+        super(opcode, JP, "V0", ADDRESS_VALUE_FORMAT.format(opcode & 0x0FFF));
+    }
+
+    public static Opcode newInstance(int opcode) {
+        return new Opcode0xB(opcode);
+    }
 
     @Override
-    public int execute(int opcode, ExecutionContext executionContext) {
-        int value = opcode & 0x0FFF;
-        LOGGER.trace(String.format("memory offset = V0(%#X) + %#X", executionContext.getRegister(0x0).getValue(), value));
-        executionContext.setOffset(executionContext.getRegister(0x0).getValue() + value);
+    public int execute(ExecutionContext executionContext) {
+        executionContext.setOffset(executionContext.getRegister(0x0).getValue() + (getOpcode() & 0x0FFF));
         return 0x0;
     }
 }

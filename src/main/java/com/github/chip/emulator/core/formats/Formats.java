@@ -20,32 +20,25 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.github.chip.emulator.core.opcodes;
-
-import com.github.chip.emulator.core.ExecutionContext;
-import com.github.chip.emulator.core.Register;
-
-import static com.github.chip.emulator.core.opcodes.Instruction.ADD;
+package com.github.chip.emulator.core.formats;
 
 /**
- * 0x7 opcode group handler
- * 0x7XNN - add NN to VX
- *
  * @author helloween
  */
-public class Opcode0x7 extends RegisterBasedOpcode {
+public enum Formats {
+    REGISTER_NUMBER_FORMAT  ("V%X"),
+    REGISTER_VALUE_FORMAT   ("#%02X"),
+    ADDRESS_VALUE_FORMAT    ("#%03X"),
+    INDEX_REGISTER_FORMAT   ("#%03X")
+    ;
 
-    private Opcode0x7(int opcode) {
-        super(opcode, ADD, opcode & 0x00FF);
+    private final String format;
+
+    Formats(String format) {
+        this.format = format;
     }
 
-    public static Opcode newInstance(int opcode) {
-        return new Opcode0x7(opcode);
-    }
-
-    @Override
-    public int execute(Register register, ExecutionContext executionContext) {
-        executionContext.setRegister(register.add(getOpcode() & 0x00FF));
-        return OPCODE_SIZE;
+    public String format(int value) {
+        return String.format(format, value);
     }
 }

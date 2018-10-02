@@ -7,7 +7,7 @@ import com.github.chip.emulator.core.services.EventService;
 import com.google.common.eventbus.Subscribe;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 /**
  * @author helloween
@@ -26,9 +26,9 @@ public class Opcode0xDTest {
         ExecutionContext context = new ExecutionContext();
         context.setRegister(register);
         context.setRegister(secondRegister);
-        Opcode opcodeHandler = new Opcode0xD();
+        Opcode opcodeHandler = Opcode0xD.newInstance(opcode);
         new DrawEventListener();
-        assertEquals(0x2, opcodeHandler.execute(opcode, context));
+        assertEquals(0x2, opcodeHandler.execute(context));
         assertEquals(0x1, x);
         assertEquals(0x2, y);
         assertEquals(0x3, height);

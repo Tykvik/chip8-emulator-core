@@ -25,7 +25,8 @@ package com.github.chip.emulator.core.opcodes;
 import com.github.chip.emulator.core.ExecutionContext;
 import com.github.chip.emulator.core.Register;
 import com.github.chip.emulator.core.exceptions.UnsupportedOpcodeException;
-import org.apache.log4j.Logger;
+
+import static com.github.chip.emulator.core.opcodes.Instruction.*;
 
 /**
  * 0x8 opcode group handler
@@ -41,69 +42,151 @@ import org.apache.log4j.Logger;
  *
  * @author helloween
  */
-public class Opcode0x8 extends TwoRegistersBasedOpcode {
-    private static final Logger LOGGER = Logger.getLogger(Opcode0x8.class);
+public class Opcode0x8 extends AbstractOpcode {
+    private Opcode0x8(int opcode) {
+        super(opcode, Instruction.UNDEFINED);
+    }
+
+    public static Opcode newInstance(int opcode) {
+        switch (opcode & 0x000F) {
+            case 0x0:
+                return new Opcode0x8XX0(opcode);
+            case 0x1:
+                return new Opcode0x8XX1(opcode);
+            case 0x2:
+                return new Opcode0x8XX2(opcode);
+            case 0x3:
+                return new Opcode0x8XX3(opcode);
+            case 0x4:
+                return new Opcode0x8XX4(opcode);
+            case 0x5:
+                return new Opcode0x8XX5(opcode);
+            case 0x6:
+                return new Opcode0x8XX6(opcode);
+            case 0x7:
+                return new Opcode0x8XX7(opcode);
+            case 0xE:
+                return new Opcode0x8XXE(opcode);
+            default:
+                return new Opcode0x8(opcode);
+        }
+    }
 
     @Override
-    public int execute(Register firstRegister, Register secondRegister, int opcode, ExecutionContext executionContext) throws UnsupportedOpcodeException {
-        switch (opcode & 0x000F) {
-            case 0x0: {
-                LOGGER.trace(String.format("V%d = V%d", firstRegister.getNumber(), secondRegister.getNumber()));
-                executionContext.setRegister(new Register(firstRegister.getNumber(), secondRegister.getValue()));
-                break;
-            }
-            case 0x1: {
-                LOGGER.trace(String.format("V%d |= V%d", firstRegister.getNumber(), secondRegister.getNumber()));
-                executionContext.setRegister(firstRegister.or(secondRegister));
-                break;
-            }
-            case 0x2: {
-                LOGGER.trace(String.format("V%d &= V%d", firstRegister.getNumber(), secondRegister.getNumber()));
-                executionContext.setRegister(firstRegister.and(secondRegister));
-                break;
-            }
-            case 0x3: {
-                LOGGER.trace(String.format("V%d ^= V%d", firstRegister.getNumber(), secondRegister.getNumber()));
-                executionContext.setRegister(firstRegister.xor(secondRegister));
-                break;
-            }
-            case 0x4: {
-                LOGGER.trace(String.format("V%d += V%d", firstRegister.getNumber(), secondRegister.getNumber()));
-                executionContext.setRegister(new Register(0xF, firstRegister.getValue() + secondRegister.getValue() > 0xFF ? 0x1 : 0x0));
-                executionContext.setRegister(firstRegister.add(secondRegister));
-                break;
-            }
-            case 0x5: {
-                LOGGER.trace(String.format("V%d -= V%d", firstRegister.getNumber(), secondRegister.getNumber()));
-                executionContext.setRegister(new Register(0xF, firstRegister.getValue() < secondRegister.getValue() ? 0x0 : 0x1));
-                executionContext.setRegister(firstRegister.sub(secondRegister));
-                break;
-            }
-            case 0x6: {
-                LOGGER.trace(String.format("V%d = V%d = V%d >> 1", firstRegister.getNumber(), secondRegister.getNumber(), secondRegister.getNumber()));
-                Register shiftedRegister = secondRegister.rightShift();
-                executionContext.setRegister(shiftedRegister);
-                executionContext.setRegister(new Register(firstRegister.getNumber(), shiftedRegister.getValue()));
-                executionContext.setRegister(new Register(0xF, secondRegister.getValue() & 0x1));
-                break;
-            }
-            case 0x7: {
-                LOGGER.trace(String.format("V%d = V%d - V%d", firstRegister.getNumber(), secondRegister.getNumber(), firstRegister.getNumber()));
-                executionContext.setRegister(new Register(0xF, secondRegister.getValue() < firstRegister.getValue() ? 0x0 : 0x1));
-                executionContext.setRegister(new Register(firstRegister.getNumber(), secondRegister.getValue() - firstRegister.getValue()));
-                break;
-            }
-            case 0xE: {
-                LOGGER.trace(String.format("V%d = V%d = V%d << 1", firstRegister.getNumber(), secondRegister.getNumber(), secondRegister.getNumber()));
-                Register shiftedRegister = secondRegister.leftShift();
-                executionContext.setRegister(shiftedRegister);
-                executionContext.setRegister(new Register(firstRegister.getNumber(), shiftedRegister.getValue()));
-                executionContext.setRegister(new Register(0xF, (secondRegister.getValue() & 0x80) >> 7));
-                break;
-            }
-            default:
-                throw new UnsupportedOpcodeException("unsupported 0x8XXX opcode");
+    public int execute(ExecutionContext executionContext) throws UnsupportedOpcodeException {
+        throw new UnsupportedOpcodeException("unsupported 0x8XXX opcode");
+    }
+
+    private static final class Opcode0x8XX0 extends TwoRegistersBasedOpcode {
+        public Opcode0x8XX0(int opcode) {
+            super(opcode, LD);
         }
-        return OPCODE_SIZE;
+
+        @Override
+        protected int execute(Register firstRegister, Register secondRegister, ExecutionContext executionContext) {
+            executionContext.setRegister(new Register(firstRegister.getNumber(), secondRegister.getValue()));
+            return OPCODE_SIZE;
+        }
+    }
+
+    private static final class Opcode0x8XX1 extends TwoRegistersBasedOpcode {
+        public Opcode0x8XX1(int opcode) {
+            super(opcode, OR);
+        }
+
+        @Override
+        protected int execute(Register firstRegister, Register secondRegister, ExecutionContext executionContext) {
+            executionContext.setRegister(firstRegister.or(secondRegister));
+            return OPCODE_SIZE;
+        }
+    }
+
+    private static final class Opcode0x8XX2 extends TwoRegistersBasedOpcode {
+        public Opcode0x8XX2(int opcode) {
+            super(opcode, AND);
+        }
+
+        @Override
+        protected int execute(Register firstRegister, Register secondRegister, ExecutionContext executionContext) {
+            executionContext.setRegister(firstRegister.and(secondRegister));
+            return OPCODE_SIZE;
+        }
+    }
+
+    private static final class Opcode0x8XX3 extends TwoRegistersBasedOpcode {
+        public Opcode0x8XX3(int opcode) {
+            super(opcode, XOR);
+        }
+
+        @Override
+        protected int execute(Register firstRegister, Register secondRegister, ExecutionContext executionContext) {
+            executionContext.setRegister(firstRegister.xor(secondRegister));
+            return OPCODE_SIZE;
+        }
+    }
+
+    private static final class Opcode0x8XX4 extends TwoRegistersBasedOpcode {
+        public Opcode0x8XX4(int opcode) {
+            super(opcode, ADD);
+        }
+
+        @Override
+        protected int execute(Register firstRegister, Register secondRegister, ExecutionContext executionContext) {
+            executionContext.setRegister(new Register(0xF, firstRegister.getValue() + secondRegister.getValue() > 0xFF ? 0x1 : 0x0));
+            executionContext.setRegister(firstRegister.add(secondRegister));
+            return OPCODE_SIZE;
+        }
+    }
+
+    private static final class Opcode0x8XX5 extends TwoRegistersBasedOpcode {
+        public Opcode0x8XX5(int opcode) {
+            super(opcode, SUB);
+        }
+
+        @Override
+        protected int execute(Register firstRegister, Register secondRegister, ExecutionContext executionContext) {
+            executionContext.setRegister(new Register(0xF, firstRegister.getValue() < secondRegister.getValue() ? 0x0 : 0x1));
+            executionContext.setRegister(firstRegister.sub(secondRegister));
+            return OPCODE_SIZE;
+        }
+    }
+
+    private static final class Opcode0x8XX6 extends TwoRegistersBasedOpcode {
+        public Opcode0x8XX6(int opcode) {
+            super(opcode, SHR);
+        }
+
+        @Override
+        protected int execute(Register firstRegister, Register secondRegister, ExecutionContext executionContext) {
+            executionContext.setRegister(firstRegister.rightShift());
+            executionContext.setRegister(new Register(0xF, firstRegister.getValue() & 0x1));
+            return OPCODE_SIZE;
+        }
+    }
+
+    private static final class Opcode0x8XX7 extends TwoRegistersBasedOpcode {
+        public Opcode0x8XX7(int opcode) {
+            super(opcode, SUBN);
+        }
+
+        @Override
+        protected int execute(Register firstRegister, Register secondRegister, ExecutionContext executionContext) {
+            executionContext.setRegister(new Register(0xF, secondRegister.getValue() < firstRegister.getValue() ? 0x0 : 0x1));
+            executionContext.setRegister(new Register(firstRegister.getNumber(), secondRegister.getValue() - firstRegister.getValue()));
+            return OPCODE_SIZE;
+        }
+    }
+
+    private static final class Opcode0x8XXE extends TwoRegistersBasedOpcode {
+        public Opcode0x8XXE(int opcode) {
+            super(opcode, SHL);
+        }
+
+        @Override
+        protected int execute(Register firstRegister, Register secondRegister, ExecutionContext executionContext) {
+            executionContext.setRegister(firstRegister.leftShift());
+            executionContext.setRegister(new Register(0xF, (firstRegister.getValue() & 0x80) >> 7));
+            return OPCODE_SIZE;
+        }
     }
 }

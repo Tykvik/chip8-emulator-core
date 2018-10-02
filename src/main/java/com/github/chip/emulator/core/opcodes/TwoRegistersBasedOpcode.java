@@ -31,13 +31,27 @@ import com.github.chip.emulator.core.exceptions.UnsupportedOpcodeException;
  * @author helloween
  */
 public abstract class TwoRegistersBasedOpcode extends RegisterBasedOpcode {
-    @Override
-    protected int execute(Register register, int opcode, ExecutionContext executionContext) throws UnsupportedOpcodeException, InvalidRegisterNumberException {
-        int secondRegister = (opcode & 0x00F0) >> 4;
-        checkRegisterRange(secondRegister);
 
-        return execute(register, executionContext.getRegister(secondRegister), opcode, executionContext);
+    public TwoRegistersBasedOpcode(int opcode, Instruction instruction, String...arguments) {
+        super(opcode, instruction, arguments);
     }
 
-    protected abstract int execute(Register firstRegister, Register secondRegister, int opcode, ExecutionContext executionContext) throws UnsupportedOpcodeException;
+    public TwoRegistersBasedOpcode(int opcode, Instruction instruction) {
+        super(opcode, instruction, formatRegisterNumber(getRegisterNumber(opcode)),
+                                   formatRegisterNumber(getSecondRegisterNumber(opcode)));
+    }
+
+    @Override
+    protected int execute(Register register, ExecutionContext executionContext) throws UnsupportedOpcodeException, InvalidRegisterNumberException {
+        int secondRegister = getSecondRegisterNumber(getOpcode());
+        checkRegisterRange(secondRegister);
+
+        return execute(register, executionContext.getRegister(secondRegister), executionContext);
+    }
+
+    protected abstract int execute(Register firstRegister, Register secondRegister, ExecutionContext executionContext) throws UnsupportedOpcodeException;
+
+    protected static int getSecondRegisterNumber(int opcode) {
+        return (opcode & 0x00F0) >> 4;
+    }
 }

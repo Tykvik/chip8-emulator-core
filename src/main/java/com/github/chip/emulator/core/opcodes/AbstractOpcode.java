@@ -22,30 +22,42 @@
  */
 package com.github.chip.emulator.core.opcodes;
 
-import com.github.chip.emulator.core.ExecutionContext;
-import com.github.chip.emulator.core.Register;
-
-import static com.github.chip.emulator.core.opcodes.Instruction.ADD;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 /**
- * 0x7 opcode group handler
- * 0x7XNN - add NN to VX
- *
  * @author helloween
  */
-public class Opcode0x7 extends RegisterBasedOpcode {
+public abstract class AbstractOpcode implements Opcode {
+    public static final int OPCODE_SIZE = 0x2;
 
-    private Opcode0x7(int opcode) {
-        super(opcode, ADD, opcode & 0x00FF);
-    }
+    private final int           opcode;
+    private final Instruction   instruction;
+    private final List<String>  arguments;
 
-    public static Opcode newInstance(int opcode) {
-        return new Opcode0x7(opcode);
+    public AbstractOpcode(int opcode, Instruction instruction, String...arguments) {
+        this.opcode         = opcode;
+        this.instruction    = instruction;
+        this.arguments      = new ArrayList<>();
+        this.arguments.addAll(Arrays.asList(arguments));
     }
 
     @Override
-    public int execute(Register register, ExecutionContext executionContext) {
-        executionContext.setRegister(register.add(getOpcode() & 0x00FF));
-        return OPCODE_SIZE;
+    public int getRawOpcode() {
+        return opcode;
+    }
+
+    public Instruction getInstruction() {
+        return instruction;
+    }
+
+    public List<String> getArguments() {
+        return Collections.unmodifiableList(arguments);
+    }
+
+    public int getOpcode() {
+        return opcode;
     }
 }

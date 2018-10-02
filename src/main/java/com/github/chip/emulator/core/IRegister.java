@@ -54,7 +54,7 @@ public class IRegister {
      * @param value added value
      */
     public IRegister add(int value) {
-        return new IRegister(this.value + value);
+        return new IRegister((this.value + value) % (0xFFF + 1));
     }
 
     /**

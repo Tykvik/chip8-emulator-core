@@ -40,24 +40,29 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * @author helloween
  */
 public class ExecutionContext {
-    private static final int MEMORY_SIZE        = 1 << 12;
-    private static final int REGISTER_COUNT     = 1 << 4;
-    private static final int SCREEN_WIDTH       = 64;
-    private static final int SCREEN_HEIGHT      = 32;
+    private static final int MEMORY_SIZE            = 1 << 12;
+    private static final int REGISTER_COUNT         = 1 << 4;
+    private static final int USER_REGISTER_COUNT    = 1 << 3;
+    private static final int SCREEN_WIDTH           = 64;
+    private static final int SCREEN_HEIGHT          = 32;
 
     private final ByteBuffer             memory;
     private final Map<Integer, Register> registers;
+    private final Map<Integer, Register> userRegisters;
     private AtomicReference<IRegister>   iRegister;
     private final Deque<Integer>         stack;
     private final Map<Integer, Boolean>  keys;
     private volatile AtomicInteger       offset;
     private volatile AtomicInteger       delayTimer;
     private volatile AtomicInteger       soundTimer;
+    private final Timer                  timer;
+    private VRAM                         vram;
     private ReadWriteLock                readWriteLock;
 
     public ExecutionContext() {
         this.memory         = ByteBuffer.allocateDirect(MEMORY_SIZE);
         this.registers      = new ConcurrentHashMap<>();
+        this.userRegisters  = new ConcurrentHashMap<>();
         this.iRegister      = new AtomicReference<>(new IRegister());
         this.stack          = new ConcurrentLinkedDeque<>();
         this.offset         = new AtomicInteger(0x200);
@@ -65,16 +70,20 @@ public class ExecutionContext {
         this.soundTimer     = new AtomicInteger();
         this.keys           = new ConcurrentHashMap<>();
         this.readWriteLock  = new ReentrantReadWriteLock();
+        this.vram           = new VRAM();
 
         for (int i = 0; i < REGISTER_COUNT; ++i) {
             registers.put(i, new Register(i));
             keys.put(i, Boolean.FALSE);
         }
 
-        memory.position(offset.get());
-        new VRAM();
+        for (int i = 0; i < USER_REGISTER_COUNT; ++i) {
+            userRegisters.put(i, new Register(i));
+        }
 
-        Timer timer = new Timer(true);
+        memory.position(offset.get());
+
+        this.timer = new Timer(true);
         TimerTask task = new TimerTask() {
             @Override
             public void run() {
@@ -91,6 +100,8 @@ public class ExecutionContext {
                 if (soundTimer.get() != 0) {
                     AsyncEventService.getInstance().postEvent(PlaySoundEvent.INSTANCE);
                 }
+                AsyncEventService.getInstance().postEvent(new ChangeDelayTimerValueEvent(delayTimer.get()));
+                AsyncEventService.getInstance().postEvent(new ChangeSoundTimerValueEvent(soundTimer.get()));
             }
         };
 
@@ -115,16 +126,30 @@ public class ExecutionContext {
     }
 
     /**
+     * sets new user register value
+     *
+     * @param register new user register value
+     */
+    public void setUserRegister(Register register) {
+        this.userRegisters.put(register.getNumber(), register);
+    }
+
+    /**
+     * @param registerNumber user register number
+     * @return user register
+     */
+    public Register getUserRegister(int registerNumber) {
+        return this.userRegisters.get(registerNumber);
+    }
+
+    /**
      * sets new index register value
      *
      * @param register new index register value
      */
     public void setIndexRegister(IRegister register) {
         AsyncEventService.getInstance().postEvent(new ChangeIndexRegisterValueEvent(register.getValue()));
-        IRegister oldValue;
-        do {
-            oldValue = iRegister.get();
-        } while (!iRegister.compareAndSet(oldValue, register));
+        iRegister.getAndSet(register);
     }
 
     /**
@@ -185,10 +210,8 @@ public class ExecutionContext {
     }
 
     public void setDelayTimer(int delayTimer) {
-        int oldDelayTimerValue;
-        do {
-            oldDelayTimerValue = this.delayTimer.get();
-        } while (!this.delayTimer.compareAndSet(oldDelayTimerValue, delayTimer));
+        this.delayTimer.getAndSet(delayTimer);
+        AsyncEventService.getInstance().postEvent(new ChangeDelayTimerValueEvent(delayTimer));
     }
 
     public int getDelayTimer() {
@@ -196,10 +219,8 @@ public class ExecutionContext {
     }
 
     public void setSoundTimer(int soundTimer) {
-        int oldSoundTimerValue;
-        do {
-            oldSoundTimerValue = this.soundTimer.get();
-        } while(!this.soundTimer.compareAndSet(oldSoundTimerValue, soundTimer));
+        this.soundTimer.getAndSet(soundTimer);
+        AsyncEventService.getInstance().postEvent(new ChangeSoundTimerValueEvent(soundTimer));
     }
 
     public int getSoundTimer() {
@@ -211,10 +232,8 @@ public class ExecutionContext {
     }
 
     public void setOffset(int offset) {
-        int oldValue;
-        do {
-            oldValue = this.offset.get();
-        } while (!this.offset.compareAndSet(oldValue, offset));
+        this.offset.getAndSet(offset);
+        AsyncEventService.getInstance().postEvent(new ChangeProgramCounterEvent(offset - 0x200));
     }
 
     public void setKey(int key, boolean value) {
@@ -223,6 +242,19 @@ public class ExecutionContext {
 
     public boolean getKey(int key) {
         return this.keys.get(key);
+    }
+
+    public synchronized void setExtendedScreenMode() {
+        if (vram.screenWidth != (SCREEN_WIDTH << 1)) {
+            this.vram.dispose();
+            this.vram = new VRAM(SCREEN_WIDTH << 1, SCREEN_HEIGHT << 1);
+        }
+    }
+
+    public void dispose() {
+        vram.dispose();
+        timer.cancel();
+        timer.purge();
     }
 
     /**
@@ -261,26 +293,49 @@ public class ExecutionContext {
          * @param y y coordinate
          * @param height height
          */
-        public synchronized void draw(int x, int y, int height) {
+        public void draw(int x, int y, int height) {
             setRegister(new Register(0xF, 0x0));
 
-            for(int j = 0; j < height; j++) {
-                int dat = (memory.get(j + iRegister.get().getValue())) & 0xFF;
-                for(int i = 0; i < 8; i++) {
-                    if((dat & (0x80 >> i)) == 0) continue;
+            int spriteHeight = height;
+            int spriteWidth  = 0x8;
+            int multiplier   = 0x1;
 
-                    int rx = i + x;
-                    int ry = j + y;
+            if (screenWidth > SCREEN_WIDTH && height == 0) { // extended mode
+                spriteHeight = spriteWidth = 0x10;
+                multiplier   = 0x2;
+            }
 
-                    if(rx >=  screenWidth|| ry >= screenHeight) continue;
+            for(int j = 0; j < spriteHeight; j++) {
+                int dat = (memory.get((j * multiplier) + iRegister.get().getValue())) & 0xFF;
+                if (spriteWidth == 0x10) {
+                    dat <<= 8;
+                    dat |= ((memory.get((j * multiplier) + 1 + iRegister.get().getValue())) & 0xFF);
+                }
+                for(int i = 0; i < spriteWidth; i++) {
+                    boolean skip;
+                    if (spriteWidth == 0x10)
+                        skip = (dat & (0x8000 >> i)) == 0;
+                    else
+                        skip = (dat & (0x80 >> i)) == 0;
 
-                    if(vram[rx][ry])
-                        setRegister(new Register(0xF, 0x1));
+                    if(!skip) {
+                        int rx = i + x;
+                        int ry = j + y;
 
-                    vram[rx][ry] ^= true;
+                        if (rx >= screenWidth || ry >= screenHeight) continue;
+
+                        if (vram[rx][ry])
+                            setRegister(new Register(0xF, 0x1));
+
+                        vram[rx][ry] ^= true;
+                    }
                 }
             }
             AsyncEventService.getInstance().postEvent(new RefreshScreenEvent(Arrays.copyOf(vram, vram.length)));
+        }
+
+        public void dispose() {
+            EventService.getInstance().deleteHandler(this);
         }
 
         @Subscribe
@@ -291,11 +346,47 @@ public class ExecutionContext {
 
         @Subscribe
         @SuppressWarnings("unused")
-        public synchronized void handleClearEvent(ClearVRAMEvent event) {
-            for (int i = 0; i < SCREEN_WIDTH; ++i)
-                for (int j = 0; j < SCREEN_HEIGHT; ++j)
+        public void handleClearEvent(ClearVRAMEvent event) {
+            for (int i = 0; i < screenWidth; ++i)
+                for (int j = 0; j < screenHeight; ++j)
                     vram[i][j] = false;
             AsyncEventService.getInstance().postEvent(new RefreshScreenEvent(Arrays.copyOf(vram, vram.length)));
+        }
+
+        @Subscribe
+        @SuppressWarnings("unused")
+        public void handleScrollDownEvent(ScrollDownEvent event) {
+            for (int i = 0; i < vram.length; ++i) {
+                for (int j = vram[i].length - 1; j >= event.getCount(); --j)
+                    vram[i][j] = vram[i][j - event.getCount()];
+                for(int x  = event.getCount() - 1; x >= 0; --x) {
+                    vram[i][x] = false;
+                }
+            }
+        }
+
+        @Subscribe
+        @SuppressWarnings("unused")
+        public void handleScrollRightEvent(ScrollRightEvent event) {
+            for (int i = vram.length - 1 ; i >= 4; --i) {
+                for (int j = 0; j < vram[0].length; ++j)
+                    vram[i][j] = vram[i - 4][j];
+            }
+            for (int i = 0; i < 4; ++i)
+                for (int j = 0; j < vram[0].length; ++j)
+                    vram[i][j] = false;
+        }
+
+        @Subscribe
+        @SuppressWarnings("unused")
+        public void handleScrollLeftEvent(ScrollLeftEvent event) {
+            for (int i = 0 ; i < vram.length - 4; ++i) {
+                for (int j = 0; j < vram[0].length; ++j)
+                    vram[i][j] = vram[i + 4][j];
+            }
+            for (int i = vram.length - 1; i >= vram.length - 4; --i)
+                for (int j = 0; j < vram[0].length; ++j)
+                    vram[i][j] = false;
         }
     }
 }

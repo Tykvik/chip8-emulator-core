@@ -24,7 +24,8 @@ package com.github.chip.emulator.core.opcodes;
 
 import com.github.chip.emulator.core.ExecutionContext;
 import com.github.chip.emulator.core.Register;
-import org.apache.log4j.Logger;
+
+import static com.github.chip.emulator.core.opcodes.Instruction.SE;
 
 /**
  * 0x5 opcode group handler
@@ -33,11 +34,17 @@ import org.apache.log4j.Logger;
  * @author helloween
  */
 public class Opcode0x5 extends TwoRegistersBasedOpcode {
-    private static final Logger LOGGER = Logger.getLogger(Opcode0x5.class);
+
+    private Opcode0x5(int opcode) {
+        super(opcode, SE);
+    }
+
+    public static Opcode newInstance(int opcode) {
+        return new Opcode0x5(opcode);
+    }
 
     @Override
-    public int execute(Register firstRegister, Register secondRegister, int opcode, ExecutionContext executionContext) {
-        LOGGER.trace(String.format("condition V%d == V%d", firstRegister.getNumber(), secondRegister.getNumber()));
+    public int execute(Register firstRegister, Register secondRegister, ExecutionContext executionContext) {
         if (firstRegister.getValue() == secondRegister.getValue())
             return OPCODE_SIZE * 2;
         return OPCODE_SIZE;

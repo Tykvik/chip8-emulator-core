@@ -22,18 +22,15 @@
  */
 package com.github.chip.emulator.core;
 
-import com.github.chip.emulator.core.events.PauseEvent;
-import com.github.chip.emulator.core.events.PressKeyEvent;
-import com.github.chip.emulator.core.events.SetDelayEvent;
-import com.github.chip.emulator.core.events.StopEvent;
+import com.github.chip.emulator.core.events.*;
 import com.github.chip.emulator.core.opcodes.*;
-import com.github.chip.emulator.core.services.EventService;
+import com.github.chip.emulator.core.services.AsyncEventService;
 import com.google.common.eventbus.Subscribe;
 import org.apache.log4j.Logger;
 
 import java.nio.ByteBuffer;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -44,10 +41,14 @@ public class ProgramExecutor implements Runnable {
     private static final Logger LOGGER = Logger.getLogger(ProgramExecutor.class);
 
     private final ExecutionContext          executionContext;
-    private final Map<Integer, Opcode>      opcodeMap;
+    private final ByteBuffer                programBuffer;
     private final AtomicInteger             delay;
+    private final AtomicInteger             waitKeyPressEventRegister;
     private volatile boolean                stopFlag;
     private volatile boolean                pauseFlag;
+    private volatile boolean                nextStep;
+    private volatile boolean                waitKeyPress;
+
 
     /**
      * ctor
@@ -56,54 +57,52 @@ public class ProgramExecutor implements Runnable {
      * @param delayInMillis delay in millis
      */
     public ProgramExecutor(ByteBuffer programBuffer, int delayInMillis) {
-        this.executionContext   = new ExecutionContext();
-        this.delay              = new AtomicInteger(delayInMillis);
-        this.stopFlag           = false;
-        this.pauseFlag          = false;
+        this(programBuffer, delayInMillis, false);
+    }
 
-        opcodeMap = new HashMap<>();
-        opcodeMap.put(0x0000, new Opcode0x0());
-        opcodeMap.put(0x1000, new Opcode0x1());
-        opcodeMap.put(0x2000, new Opcode0x2());
-        opcodeMap.put(0x3000, new Opcode0x3());
-        opcodeMap.put(0x4000, new Opcode0x4());
-        opcodeMap.put(0x5000, new Opcode0x5());
-        opcodeMap.put(0x6000, new Opcode0x6());
-        opcodeMap.put(0x7000, new Opcode0x7());
-        opcodeMap.put(0x8000, new Opcode0x8());
-        opcodeMap.put(0x9000, new Opcode0x9());
-        opcodeMap.put(0xA000, new Opcode0xA());
-        opcodeMap.put(0xB000, new Opcode0xB());
-        opcodeMap.put(0xC000, new Opcode0xC());
-        opcodeMap.put(0xD000, new Opcode0xD());
-        opcodeMap.put(0xE000, new Opcode0xE());
-        opcodeMap.put(0xF000, new Opcode0xF());
+    /**
+     * ctor
+     *
+     * @param programBuffer ROM as ByteBuffer
+     * @param delayInMillis delay in millis
+     * @param pauseFlag pauseFlag (for debug)
+     */
+    public ProgramExecutor(ByteBuffer programBuffer, int delayInMillis, boolean pauseFlag) {
+        this.executionContext           = new ExecutionContext();
+        this.delay                      = new AtomicInteger(delayInMillis);
+        this.stopFlag                   = false;
+        this.pauseFlag                  = pauseFlag;
+        this.programBuffer              = programBuffer;
+        this.waitKeyPressEventRegister  = new AtomicInteger(-1);
 
         new FontLoader(this.executionContext).load();
         programBuffer.rewind();
         while (programBuffer.hasRemaining())
             executionContext.writeToMemory(programBuffer.get());
-        EventService.getInstance().registerHandler(this);
+        AsyncEventService.getInstance().registerHandler(this);
     }
 
     @Override
     public void run() {
         try {
+            List<Opcode> program = new Disassembler(this.programBuffer).disassemble();
+            Iterator<Opcode> iterator = program.iterator();
             for (;;) {
-                if (stopFlag)
+                if (stopFlag) {
+                    executionContext.dispose();
+                    AsyncEventService.getInstance().deleteHandler(this);
                     return;
+                }
 
-                while (pauseFlag)
-                    Thread.yield();
+                while (pauseFlag && !nextStep)
+                        Thread.yield();
 
                 Thread.sleep(delay.get());
-                int opcode = readOpcode();
 
-                if (opcode == 0x0)
-                    break;
+                Opcode opcode = program.get((executionContext.getOffset() - 0x200) / AbstractOpcode.OPCODE_SIZE);
 
-                LOGGER.trace(String.format("%X", opcode));
-                executionContext.setOffset(opcodeMap.get(opcode & 0xF000).execute(opcode, executionContext) + executionContext.getOffset());
+                executionContext.setOffset(opcode.execute(executionContext) + executionContext.getOffset());
+                this.nextStep = false;
             }
         } catch (Exception e) {
             LOGGER.error(e);
@@ -114,6 +113,12 @@ public class ProgramExecutor implements Runnable {
     @SuppressWarnings("unused")
     @Subscribe
     public void handleKeyPressEvent(PressKeyEvent event) {
+       if (waitKeyPress) {
+            this.waitKeyPress = false;
+            executionContext.setRegister(new Register(waitKeyPressEventRegister.get(), event.getKeyNumber()));
+            waitKeyPressEventRegister.getAndSet(-1);
+            this.pauseFlag = false;
+        }
         executionContext.setKey(event.getKeyNumber(), true);
     }
 
@@ -138,8 +143,23 @@ public class ProgramExecutor implements Runnable {
         this.pauseFlag = event.isPauseFlag();
     }
 
-    private int readOpcode() {
-        final int offset = executionContext.getOffset();
-        return ((executionContext.getMemoryValue(offset) << 8) | (executionContext.getMemoryValue(offset + 1) & 0x00FF)) & 0xFFFF;
+    @SuppressWarnings("unused")
+    @Subscribe
+    public void handleNextStepEvent(NextStepEvent event) {
+        this.nextStep = true;
+    }
+
+    @SuppressWarnings("unused")
+    @Subscribe
+    public void handleExtendedScreenMode(EnableExtendedScreenModeEvent event) {
+        this.executionContext.setExtendedScreenMode();
+    }
+
+    @SuppressWarnings("unused")
+    @Subscribe
+    public void handleWaitKeyPressEvent(WaitKeyPressEvent event) {
+        this.pauseFlag    = true;
+        this.waitKeyPress = true;
+        this.waitKeyPressEventRegister.getAndSet(event.getRegister());
     }
 }

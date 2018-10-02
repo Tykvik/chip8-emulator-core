@@ -5,7 +5,8 @@ import com.github.chip.emulator.core.Register;
 import com.github.chip.emulator.core.exceptions.UnsupportedOpcodeException;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 /**
  * @author helloween
@@ -18,21 +19,22 @@ public class Opcode0xETest {
         Register register = new Register(0x1, 0x2);
         context.setRegister(register);
         context.setKey(0x2, true);
-        Opcode opcodeHandler = new Opcode0xE();
-        assertEquals(0x4, opcodeHandler.execute(opcode, context));
+        Opcode opcodeHandler = Opcode0xE.newInstance(opcode);
+        assertEquals(0x4, opcodeHandler.execute(context));
         assertFalse(context.getKey(0x2));
-        assertEquals(0x2, opcodeHandler.execute(opcode, context));
+        assertEquals(0x2, opcodeHandler.execute(context));
         opcode = 0x01A1;
-        assertEquals(0x4, opcodeHandler.execute(opcode, context));
+        opcodeHandler = Opcode0xE.newInstance(opcode);
+        assertEquals(0x4, opcodeHandler.execute(context));
         context.setKey(0x2, true);
-        assertEquals(0x2, opcodeHandler.execute(opcode, context));
+        assertEquals(0x2, opcodeHandler.execute(context));
         assertFalse(context.getKey(0x2));
     }
 
     @Test(expected = UnsupportedOpcodeException.class)
     public void execute2() throws Exception {
         int opcode = 0x011A;
-        Opcode opcodeHandler = new Opcode0xE();
-        opcodeHandler.execute(opcode, new ExecutionContext());
+        Opcode opcodeHandler = Opcode0xE.newInstance(opcode);
+        opcodeHandler.execute(new ExecutionContext());
     }
 }

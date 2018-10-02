@@ -20,32 +20,33 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package com.github.chip.emulator.core.opcodes;
+package com.github.chip.emulator.core;
 
-import com.github.chip.emulator.core.ExecutionContext;
-import com.github.chip.emulator.core.Register;
+import com.github.chip.emulator.core.exceptions.UnsupportedOpcodeException;
+import com.github.chip.emulator.core.opcodes.*;
 
-import static com.github.chip.emulator.core.opcodes.Instruction.ADD;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * 0x7 opcode group handler
- * 0x7XNN - add NN to VX
- *
  * @author helloween
  */
-public class Opcode0x7 extends RegisterBasedOpcode {
+public class Disassembler {
+    private final ByteBuffer    programBuffer;
+    private final List<Opcode>  opcodes;
 
-    private Opcode0x7(int opcode) {
-        super(opcode, ADD, opcode & 0x00FF);
+    public Disassembler(ByteBuffer programBuffer) {
+        this.programBuffer = programBuffer;
+        this.opcodes       = new ArrayList<>();
     }
 
-    public static Opcode newInstance(int opcode) {
-        return new Opcode0x7(opcode);
-    }
-
-    @Override
-    public int execute(Register register, ExecutionContext executionContext) {
-        executionContext.setRegister(register.add(getOpcode() & 0x00FF));
-        return OPCODE_SIZE;
+    public List<Opcode> disassemble() throws UnsupportedOpcodeException {
+        programBuffer.rewind();
+        while (programBuffer.hasRemaining()) {
+            int opcode = ((programBuffer.get() << 8) | (programBuffer.get() & 0x00FF)) & 0xFFFF;
+            opcodes.add(OpcodeFactory.getInstance().newOpcode(opcode));
+        }
+        return opcodes;
     }
 }

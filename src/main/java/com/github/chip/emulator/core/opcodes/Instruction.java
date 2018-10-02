@@ -22,30 +22,35 @@
  */
 package com.github.chip.emulator.core.opcodes;
 
-import com.github.chip.emulator.core.ExecutionContext;
-import com.github.chip.emulator.core.Register;
-
-import static com.github.chip.emulator.core.opcodes.Instruction.ADD;
-
 /**
- * 0x7 opcode group handler
- * 0x7XNN - add NN to VX
- *
  * @author helloween
  */
-public class Opcode0x7 extends RegisterBasedOpcode {
-
-    private Opcode0x7(int opcode) {
-        super(opcode, ADD, opcode & 0x00FF);
-    }
-
-    public static Opcode newInstance(int opcode) {
-        return new Opcode0x7(opcode);
-    }
-
-    @Override
-    public int execute(Register register, ExecutionContext executionContext) {
-        executionContext.setRegister(register.add(getOpcode() & 0x00FF));
-        return OPCODE_SIZE;
-    }
+@SuppressWarnings("SpellCheckingInspection")
+public enum Instruction {
+    UNDEFINED,   // undefined opcode
+    CLS,         // clear screen
+    RET,         // return from a subroutine
+    JP,          // jump to address
+    CALL,        // call subroutine
+    SE,          // skip the next instruction if equals
+    SNE,         // skip the next instruction if doesn't equal
+    LD,          // set VX
+    ADD,         // add to VX
+    OR,          // set VX to VX or XX
+    AND,         // set VX to VX and XX
+    XOR,         // set VX to VX xor XX
+    SUB,         // XX is subtracted from VX
+    SHR,         // right shift
+    SHL,         // left shift
+    SUBN,        // set VX to VY minus VX
+    RND,         // random
+    DRW,         // draw
+    SKP,         // skip if key pressed
+    SKNP,        // skip if key not pressed
+    BCD,         // BCD
+    HIGH,        // enable extended screen mode
+    SCD,         // scroll down
+    SCR,         // scroll right
+    SCL,         // scroll left
+    EXIT         // exit
 }

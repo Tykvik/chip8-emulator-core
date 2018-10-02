@@ -44,6 +44,10 @@ public class EventService {
         eventBus.register(handler);
     }
 
+    public void deleteHandler(Object handler) {
+        eventBus.unregister(handler);
+    }
+
     public void postEvent(Object event) {
         eventBus.post(event);
     }

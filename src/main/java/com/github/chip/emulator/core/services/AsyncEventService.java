@@ -55,4 +55,8 @@ public class AsyncEventService {
     public void postEvent(Object event) {
         eventBus.post(event);
     }
+
+    public void deleteHandler(Object handler) {
+        eventBus.unregister(handler);
+    }
 }

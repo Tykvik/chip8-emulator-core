@@ -26,7 +26,8 @@ import com.github.chip.emulator.core.ExecutionContext;
 import com.github.chip.emulator.core.Register;
 import com.github.chip.emulator.core.events.DrawEvent;
 import com.github.chip.emulator.core.services.EventService;
-import org.apache.log4j.Logger;
+
+import static com.github.chip.emulator.core.opcodes.Instruction.DRW;
 
 /**
  * 0xD opcode group handler
@@ -37,14 +38,19 @@ import org.apache.log4j.Logger;
  * @author helloween
  */
 public class Opcode0xD extends TwoRegistersBasedOpcode {
-    private static final Logger LOGGER = Logger.getLogger(Opcode0xD.class);
+    private Opcode0xD(int opcode) {
+        super(opcode, DRW, formatRegisterNumber(getRegisterNumber(opcode)),
+                           formatRegisterNumber(getSecondRegisterNumber(opcode)),
+                           String.format("#%X", opcode & 0x000F));
+    }
+
+    public static Opcode newInstance(int opcode) {
+        return new Opcode0xD(opcode);
+    }
 
     @Override
-    public int execute(Register firstRegister, Register secondRegister, int opcode, ExecutionContext executionContext) {
-        int height = opcode & 0x000F;
-        LOGGER.trace(String.format("x = V%d, y = V%d", firstRegister.getNumber(), secondRegister.getNumber()));
-        LOGGER.trace(String.format("draw x=%d y=%d height=%d", firstRegister.getValue(), secondRegister.getValue(), height));
-        EventService.getInstance().postEvent(new DrawEvent(firstRegister.getValue(), secondRegister.getValue(), height));
+    public int execute(Register firstRegister, Register secondRegister, ExecutionContext executionContext) {
+        EventService.getInstance().postEvent(new DrawEvent(firstRegister.getValue(), secondRegister.getValue(), getOpcode() & 0x000F));
         return OPCODE_SIZE;
     }
 }

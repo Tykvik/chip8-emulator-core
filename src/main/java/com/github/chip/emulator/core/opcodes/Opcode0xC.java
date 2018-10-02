@@ -24,9 +24,10 @@ package com.github.chip.emulator.core.opcodes;
 
 import com.github.chip.emulator.core.ExecutionContext;
 import com.github.chip.emulator.core.Register;
-import org.apache.log4j.Logger;
 
 import java.util.Random;
+
+import static com.github.chip.emulator.core.opcodes.Instruction.RND;
 
 /**
  * 0xC opcode group handler
@@ -35,13 +36,19 @@ import java.util.Random;
  * @author helloween
  */
 public class Opcode0xC extends RegisterBasedOpcode {
-    private static final Logger LOGGER = Logger.getLogger(Opcode0xC.class);
     private static final Random random = new Random();
 
+    private Opcode0xC(int opcode) {
+        super(opcode, RND, opcode & 0x00FF);
+    }
+
+    public static Opcode newInstance(int opcode) {
+        return new Opcode0xC(opcode);
+    }
+
     @Override
-    public int execute(Register register, int opcode, ExecutionContext executionContext) {
-        int value = random.nextInt(0xFF) & (opcode & 0x00FF);
-        LOGGER.trace(String.format("V%d = rand() & %#X", register.getNumber(), value));
+    public int execute(Register register, ExecutionContext executionContext) {
+        int value = random.nextInt(0xFF) & (getOpcode() & 0x00FF);
         executionContext.setRegister(new Register(register.getNumber(), value));
         return OPCODE_SIZE;
     }
